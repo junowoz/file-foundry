@@ -19,7 +19,7 @@ public enum FileActionError: Error, LocalizedError, Equatable {
         case .sizeChanged(let path): "File size changed before action: \(path)"
         case .hashChanged(let path): "File hash changed before action: \(path)"
         case .byteComparisonFailed(let path): "Byte comparison failed before action: \(path)"
-        case .unverifiedMetadataMatch: "Metadata matches must be verified with Exact Content before moving files to Trash."
+        case .unverifiedMetadataMatch: "Metadata matches must be verified with Exact matching before moving files to Trash."
         case .unknownFileID: "Selected file was not found in the duplicate group."
         case .keepFileSelectedForRemoval: "The file to keep cannot also be selected for Trash."
         }

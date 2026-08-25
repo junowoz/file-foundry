@@ -6,54 +6,51 @@ struct ScanOptionsView: View {
 
     var body: some View {
         Form {
-            Toggle("Include subfolders", isOn: $options.includeSubfolders)
-            Toggle("Ignore hidden files", isOn: $options.ignoreHiddenFiles)
-            Toggle("Ignore macOS packages", isOn: $options.ignorePackages)
-            Toggle("Ignore symlinks", isOn: $options.ignoreSymlinks)
+            Section("Scan") {
+                Toggle("Include subfolders", isOn: $options.includeSubfolders)
+                Toggle("Ignore hidden files", isOn: $options.ignoreHiddenFiles)
+                Toggle("Ignore macOS packages", isOn: $options.ignorePackages)
+                Toggle("Ignore symlinks", isOn: $options.ignoreSymlinks)
 
-            TextField("Minimum file size", value: $options.minimumFileSize, format: .number)
+                TextField("Minimum file size", value: $options.minimumFileSize, format: .number)
 
-            Picker("File types", selection: fileTypeSelection) {
-                ForEach(FileTypeChoice.allCases, id: \.self) { choice in
-                    Text(choice.label).tag(choice)
+                Picker("File types", selection: fileTypeSelection) {
+                    ForEach(FileTypeChoice.allCases, id: \.self) { choice in
+                        Text(choice.label).tag(choice)
+                    }
                 }
             }
 
-            Picker("Find matches", selection: $options.matchMode) {
-                Text("Exact Content").tag(MatchMode.exactContent)
-                Text("Metadata").tag(MatchMode.metadata)
-            }
-            .pickerStyle(.segmented)
-
-            Picker("Search scope", selection: $options.searchScope) {
-                Text("Anywhere").tag(SearchScope.anywhere)
-                Text("Between folders").tag(SearchScope.betweenFolders)
-                Text("Within each folder").tag(SearchScope.withinFolders)
-            }
-
-            if options.matchMode == .exactContent {
-                Picker("Verification", selection: $options.compareMode) {
-                    Text("Fast").tag(CompareMode.fast)
-                    Text("Safe").tag(CompareMode.safe)
-                    Text("Paranoid").tag(CompareMode.paranoid)
+            Section("Match") {
+                Picker("Method", selection: $options.matchMode) {
+                    Text("Exact").tag(MatchMode.exactContent)
+                    Text("Metadata").tag(MatchMode.metadata)
                 }
                 .pickerStyle(.segmented)
-            } else {
-                Section("Match when these are equal") {
+
+                Picker("Scope", selection: $options.searchScope) {
+                    Text("Anywhere").tag(SearchScope.anywhere)
+                    Text("Between folders").tag(SearchScope.betweenFolders)
+                    Text("Within each folder").tag(SearchScope.withinFolders)
+                }
+
+                if options.matchMode == .exactContent {
+                    LabeledContent("Verify") {
+                        Label("Byte-for-byte", systemImage: "checkmark.shield")
+                            .foregroundStyle(.blue)
+                    }
+                    .help("Byte-for-byte compares the complete contents after SHA-256 hashing.")
+                } else {
                     Toggle("Filename", isOn: criterionBinding(\.filename))
                     Toggle("Duration", isOn: criterionBinding(\.duration))
                     Toggle("File kind", isOn: criterionBinding(\.fileKind))
                     Toggle("File extension", isOn: criterionBinding(\.fileExtension))
-                }
 
-                if !options.metadataCriteria.hasSelection {
-                    Text("Select at least one matching field.")
-                        .font(.caption)
-                        .foregroundStyle(.red)
-                } else {
-                    Text("Metadata results are review-only. Exact Content verification is required before Trash is enabled.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    if !options.metadataCriteria.hasSelection {
+                        Text("Select at least one field.")
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                    }
                 }
             }
         }

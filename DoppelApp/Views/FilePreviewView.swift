@@ -52,21 +52,12 @@ struct FilePreviewView: View {
                     }
 
                     if let group {
-                        HStack {
-                            Button {
-                                viewModel.markFileToKeep(file, in: group)
-                            } label: {
-                                Label("Keep This File", systemImage: "checkmark.circle")
-                            }
-                            .disabled(!group.allowsRemoval || (viewModel.reviewState(for: file, in: group) == .keep && viewModel.selectedRemovalCount(in: group) == group.files.count - 1))
-
-                            Button(role: .destructive) {
-                                viewModel.setRemovalSelection(true, file: file, group: group)
-                            } label: {
-                                Label("Move File to Trash", systemImage: "trash")
-                            }
-                            .disabled(!group.allowsRemoval || viewModel.isSelectedForRemoval(file))
+                        Button {
+                            viewModel.markFileToKeep(file, in: group)
+                        } label: {
+                            Label("Keep This Copy", systemImage: "checkmark.circle")
                         }
+                        .disabled(!group.allowsRemoval || viewModel.reviewState(for: file, in: group) == .keep)
                     }
                 }
             } else {

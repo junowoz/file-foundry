@@ -14,7 +14,7 @@ final class MainViewModelTests: XCTestCase {
                 recommendedKeepFileID: first.id,
                 recommendedRemovalFileIDs: [second.id]
             )
-            let viewModel = MainViewModel()
+            let viewModel = makeViewModel()
             viewModel.scanResult = scanResult(group: group)
             viewModel.selectedRemovalFileIDs = [second.id]
 
@@ -38,7 +38,7 @@ final class MainViewModelTests: XCTestCase {
                 recommendedKeepFileID: first.id,
                 recommendedRemovalFileIDs: [second.id, third.id]
             )
-            let viewModel = MainViewModel()
+            let viewModel = makeViewModel()
             viewModel.scanResult = scanResult(group: group)
             viewModel.selectedRemovalFileIDs = [second.id, third.id]
 
@@ -60,15 +60,74 @@ final class MainViewModelTests: XCTestCase {
                 sha256: "",
                 verificationLevel: .metadataMatch
             )
-            let viewModel = MainViewModel()
+            let viewModel = makeViewModel()
             viewModel.scanResult = scanResult(group: group)
 
             viewModel.setRemovalSelection(true, file: second, group: group)
 
             XCTAssertTrue(viewModel.selectedRemovalFileIDs.isEmpty)
             XCTAssertFalse(viewModel.canMoveSelectedFiles)
-            XCTAssertEqual(viewModel.statusMessage, "Run Exact Content comparison before moving metadata matches to Trash.")
+            XCTAssertEqual(viewModel.statusMessage, "Run Exact matching before moving metadata matches to Trash.")
         }
+    }
+
+    func testPreferredFolderRuleReplansEveryExactGroup() throws {
+        try withTemporaryDirectory { directory in
+            let downloads = directory.appendingPathComponent("Downloads", isDirectory: true)
+            let favorites = directory.appendingPathComponent("Favorites", isDirectory: true)
+            try FileManager.default.createDirectory(at: downloads, withIntermediateDirectories: true)
+            try FileManager.default.createDirectory(at: favorites, withIntermediateDirectories: true)
+
+            let downloadOne = try ScannedFile(url: writeFile(downloads, "one.wav", makeData("one")))
+            let favoriteOne = try ScannedFile(url: writeFile(favorites, "one.wav", makeData("one")))
+            let downloadTwo = try ScannedFile(url: writeFile(downloads, "two.wav", makeData("two")))
+            let favoriteTwo = try ScannedFile(url: writeFile(favorites, "two.wav", makeData("two")))
+            let groups = [
+                DuplicateGroup(files: [downloadOne, favoriteOne], sha256: "one", verificationLevel: .byteByByteConfirmed),
+                DuplicateGroup(files: [downloadTwo, favoriteTwo], sha256: "two", verificationLevel: .byteByByteConfirmed)
+            ]
+            let viewModel = makeViewModel()
+            viewModel.scanResult = ScanResult(
+                selectedFolders: [directory],
+                options: ScanOptions(),
+                scannedFiles: groups.flatMap(\.files),
+                skippedFiles: [],
+                duplicateGroups: groups
+            )
+
+            viewModel.addPreferredFolder(favorites)
+
+            XCTAssertEqual(Set(viewModel.duplicateGroups.compactMap(\.recommendedKeepFileID)), [favoriteOne.id, favoriteTwo.id])
+            XCTAssertEqual(viewModel.selectedRemovalFileIDs, [downloadOne.id, downloadTwo.id])
+            XCTAssertEqual(viewModel.statusMessage, "Keep priority applied to all groups.")
+        }
+    }
+
+    func testPreferredFolderOrderPersists() throws {
+        try withTemporaryDirectory { directory in
+            let defaults = UserDefaults(suiteName: UUID().uuidString)!
+            let service = AppSettingsService(defaults: defaults)
+            let viewModel = MainViewModel(appSettingsService: service)
+
+            viewModel.addPreferredFolder(directory)
+
+            XCTAssertEqual(service.load().preferredFolderPaths, [directory.standardizedFileURL.path])
+        }
+    }
+
+    func testExactModeAlwaysStartsWithByteComparison() {
+        let defaults = UserDefaults(suiteName: UUID().uuidString)!
+        let viewModel = MainViewModel(
+            options: ScanOptions(compareMode: .fast, matchMode: .exactContent),
+            appSettingsService: AppSettingsService(defaults: defaults)
+        )
+
+        XCTAssertEqual(viewModel.options.compareMode, .safe)
+    }
+
+    private func makeViewModel() -> MainViewModel {
+        let defaults = UserDefaults(suiteName: UUID().uuidString)!
+        return MainViewModel(appSettingsService: AppSettingsService(defaults: defaults))
     }
 
     private func scanResult(group: DuplicateGroup) -> ScanResult {

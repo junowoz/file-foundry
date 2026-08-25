@@ -8,10 +8,9 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
-            Picker("Default compare mode", selection: $viewModel.settings.compareMode) {
-                Text("Fast").tag(CompareMode.fast)
-                Text("Safe").tag(CompareMode.safe)
-                Text("Paranoid").tag(CompareMode.paranoid)
+            LabeledContent("Exact verification") {
+                Label("Byte-for-byte", systemImage: "checkmark.shield")
+                    .foregroundStyle(.blue)
             }
             Toggle("Include macOS packages", isOn: $viewModel.settings.includePackages)
             Button("Check for Updates") {

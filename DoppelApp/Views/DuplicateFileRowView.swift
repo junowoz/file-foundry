@@ -3,59 +3,62 @@ import SwiftUI
 
 struct DuplicateFileRowView: View {
     var file: ScannedFile
-    var isSelectedForRemoval: Bool
     var reviewState: FileReviewState
     var allowsRemoval: Bool
-    var toggleRemoval: () -> Void
+    var isSelected: Bool
     var keepFile: () -> Void
+    var selectFile: () -> Void
 
     var body: some View {
         HStack(spacing: 10) {
-            Button(action: toggleRemoval) {
-                Image(systemName: isSelectedForRemoval ? "checkmark.square.fill" : "square")
-                    .foregroundStyle(isSelectedForRemoval ? .red : .secondary)
+            Button(action: keepFile) {
+                Image(systemName: reviewState == .keep ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(reviewState == .keep ? .green : .secondary)
             }
             .buttonStyle(.plain)
-            .frame(width: 20)
+            .frame(width: 24, height: 24)
             .disabled(!allowsRemoval)
-            .help(allowsRemoval ? (isSelectedForRemoval ? "Keep this file" : "Move this file to Trash") : "Verify with Exact Content before cleanup")
+            .help(allowsRemoval ? "Keep this copy and mark the others for Trash" : "Verify with Exact matching before cleanup")
 
-            Image(systemName: iconName)
-                .foregroundStyle(.secondary)
-                .frame(width: 20)
+            Button(action: selectFile) {
+                HStack(spacing: 10) {
+                    Image(systemName: iconName)
+                        .foregroundStyle(.secondary)
+                        .frame(width: 20)
 
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
-                    Text(file.filename)
-                        .lineLimit(1)
-                    badge
+                    VStack(alignment: .leading, spacing: 3) {
+                        HStack(spacing: 8) {
+                            Text(file.filename)
+                                .fontWeight(.medium)
+                                .lineLimit(1)
+                            badge
+                        }
+                        Text(file.path)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                        Text("\(AppFormatters.fileSize(file.size)) · Modified \(AppFormatters.date(file.modificationDate))")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                            .lineLimit(1)
+                    }
+
+                    Spacer(minLength: 0)
                 }
-                Text(file.path)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                Text("\(AppFormatters.fileSize(file.size)) · Created \(AppFormatters.date(file.creationDate)) · Modified \(AppFormatters.date(file.modificationDate))")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-                    .lineLimit(1)
             }
+            .buttonStyle(.plain)
         }
-        .padding(.leading, 18)
-        .padding(.vertical, 3)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(isSelected ? Color.accentColor.opacity(0.06) : Color.clear)
         .contextMenu {
-            if allowsRemoval {
+            if allowsRemoval, reviewState != .keep {
                 Button {
                     keepFile()
                 } label: {
                     Label("Keep This File", systemImage: "checkmark.circle")
-                }
-
-                if !isSelectedForRemoval {
-                    Button(role: .destructive) {
-                        toggleRemoval()
-                    } label: {
-                        Label("Move File to Trash", systemImage: "trash")
-                    }
                 }
             }
         }
@@ -67,20 +70,15 @@ struct DuplicateFileRowView: View {
             case .keep:
                 Text("Keep")
                     .foregroundStyle(.green)
-                    .background(.green.opacity(0.12), in: Capsule())
             case .remove:
-                Text("Remove")
+                Text("Trash")
                     .foregroundStyle(.red)
-                    .background(.red.opacity(0.12), in: Capsule())
             case .needsReview:
                 Text(allowsRemoval ? "Needs review" : "Candidate")
-                    .foregroundStyle(.yellow)
-                    .background(.yellow.opacity(0.15), in: Capsule())
+                    .foregroundStyle(.orange)
             }
         }
-        .font(.caption2)
-        .padding(.horizontal, 6)
-        .padding(.vertical, 2)
+        .font(.caption2.weight(.semibold))
     }
 
     private var iconName: String {

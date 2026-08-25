@@ -25,7 +25,7 @@ public struct RecommendationService: Sendable {
                 fileReasons.append(.originalNamePreferred)
                 fileReasons.append(.shorterPathPreferred)
             }
-            if options.primaryFolderPaths.contains(where: { file.path.hasPrefix($0) }) {
+            if isInPreferredFolder(file, options: options) {
                 fileReasons.append(.primaryFolderPreferred)
             }
             if fileReasons.isEmpty {
@@ -39,13 +39,32 @@ public struct RecommendationService: Sendable {
 
     private func score(for file: ScannedFile, options: ScanOptions) -> RecommendationScore {
         RecommendationScore(
+            preferredFolderRank: preferredFolderRank(for: file, options: options),
             copyPenalty: hasCopySuffix(file) ? 100 : 0,
             riskyFolderPenalty: isInEphemeralFolder(file) ? 20 : 0,
-            primaryFolderBonus: options.primaryFolderPaths.contains(where: { file.path.hasPrefix($0) }) ? -50 : 0,
             pathLength: file.path.count,
             creationTimestamp: file.creationDate?.timeIntervalSince1970 ?? file.modificationDate?.timeIntervalSince1970 ?? 0,
             filename: file.normalizedFilename
         )
+    }
+
+    private func preferredFolderRank(for file: ScannedFile, options: ScanOptions) -> Int {
+        if let rank = options.preferredFolderPaths.firstIndex(where: { contains(file: file, folderPath: $0) }) {
+            return rank
+        }
+        return options.primaryFolderPaths.contains(where: { contains(file: file, folderPath: $0) })
+            ? options.preferredFolderPaths.count
+            : Int.max
+    }
+
+    private func isInPreferredFolder(_ file: ScannedFile, options: ScanOptions) -> Bool {
+        preferredFolderRank(for: file, options: options) != Int.max
+    }
+
+    private func contains(file: ScannedFile, folderPath: String) -> Bool {
+        let folder = URL(fileURLWithPath: folderPath).resolvingSymlinksInPath().standardizedFileURL.path
+        let filePath = file.url.resolvingSymlinksInPath().standardizedFileURL.path
+        return filePath == folder || filePath.hasPrefix(folder.hasSuffix("/") ? folder : folder + "/")
     }
 
     private func hasCopySuffix(_ file: ScannedFile) -> Bool {
@@ -70,22 +89,24 @@ public struct RecommendationService: Sendable {
 }
 
 private struct RecommendationScore: Comparable {
+    var preferredFolderRank: Int
     var copyPenalty: Int
     var riskyFolderPenalty: Int
-    var primaryFolderBonus: Int
     var pathLength: Int
     var creationTimestamp: TimeInterval
     var filename: String
 
     static func < (lhs: RecommendationScore, rhs: RecommendationScore) -> Bool {
         let lhsTuple = (
-            lhs.copyPenalty + lhs.riskyFolderPenalty + lhs.primaryFolderBonus,
+            lhs.preferredFolderRank,
+            lhs.copyPenalty + lhs.riskyFolderPenalty,
             lhs.pathLength,
             lhs.creationTimestamp,
             lhs.filename
         )
         let rhsTuple = (
-            rhs.copyPenalty + rhs.riskyFolderPenalty + rhs.primaryFolderBonus,
+            rhs.preferredFolderRank,
+            rhs.copyPenalty + rhs.riskyFolderPenalty,
             rhs.pathLength,
             rhs.creationTimestamp,
             rhs.filename
@@ -93,6 +114,7 @@ private struct RecommendationScore: Comparable {
         if lhsTuple.0 != rhsTuple.0 { return lhsTuple.0 < rhsTuple.0 }
         if lhsTuple.1 != rhsTuple.1 { return lhsTuple.1 < rhsTuple.1 }
         if lhsTuple.2 != rhsTuple.2 { return lhsTuple.2 < rhsTuple.2 }
-        return lhsTuple.3 < rhsTuple.3
+        if lhsTuple.3 != rhsTuple.3 { return lhsTuple.3 < rhsTuple.3 }
+        return lhsTuple.4 < rhsTuple.4
     }
 }

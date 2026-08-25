@@ -23,6 +23,8 @@ public final class MainViewModel: ObservableObject {
     private let duplicateDetectionService: DuplicateDetectionService
     private let fileActionService: FileActionService
     private let reportExportService: ReportExportService
+    private let recommendationService: RecommendationService
+    private let appSettingsService: AppSettingsService
     private var scanTask: Task<Void, Never>?
 
     public init(
@@ -30,10 +32,21 @@ public final class MainViewModel: ObservableObject {
         options: ScanOptions = ScanOptions(),
         duplicateDetectionService: DuplicateDetectionService = DuplicateDetectionService(),
         fileActionService: FileActionService = FileActionService(),
-        reportExportService: ReportExportService = ReportExportService()
+        reportExportService: ReportExportService = ReportExportService(),
+        recommendationService: RecommendationService = RecommendationService(),
+        appSettingsService: AppSettingsService = AppSettingsService()
     ) {
+        var initialOptions = options
+        let savedSettings = appSettingsService.load()
+        if initialOptions.preferredFolderPaths.isEmpty {
+            initialOptions.preferredFolderPaths = savedSettings.preferredFolderPaths.map(Self.canonicalFolderPath)
+        } else {
+            initialOptions.preferredFolderPaths = initialOptions.preferredFolderPaths.map(Self.canonicalFolderPath)
+        }
+        initialOptions.ignorePackages = !savedSettings.includePackages
+        initialOptions.compareMode = .safe
         self.folders = folders
-        self.options = options
+        self.options = initialOptions
         self.scanState = .idle
         self.scanResult = nil
         self.selectedGroupID = nil
@@ -45,6 +58,8 @@ public final class MainViewModel: ObservableObject {
         self.duplicateDetectionService = duplicateDetectionService
         self.fileActionService = fileActionService
         self.reportExportService = reportExportService
+        self.recommendationService = recommendationService
+        self.appSettingsService = appSettingsService
     }
 
     public var duplicateGroups: [DuplicateGroup] {
@@ -113,6 +128,67 @@ public final class MainViewModel: ObservableObject {
         statusMessage = "Cleared"
     }
 
+    public func addPreferredFolder(_ folder: URL) {
+        let path = Self.canonicalFolderPath(folder.path)
+        guard !options.preferredFolderPaths.contains(path) else {
+            statusMessage = "This keep location is already in the priority list."
+            return
+        }
+        options.preferredFolderPaths.append(path)
+        applyKeepRules()
+    }
+
+    public func removePreferredFolder(at index: Int) {
+        guard options.preferredFolderPaths.indices.contains(index) else { return }
+        options.preferredFolderPaths.remove(at: index)
+        applyKeepRules()
+    }
+
+    public func movePreferredFolder(from index: Int, by offset: Int) {
+        let destination = index + offset
+        guard options.preferredFolderPaths.indices.contains(index),
+              options.preferredFolderPaths.indices.contains(destination)
+        else { return }
+        options.preferredFolderPaths.swapAt(index, destination)
+        applyKeepRules()
+    }
+
+    public func applyKeepRules() {
+        savePreferredFolders()
+        guard var result = scanResult else {
+            statusMessage = options.preferredFolderPaths.isEmpty ? "Keep priority cleared." : "Keep priority updated."
+            return
+        }
+
+        result.options = options
+        result.duplicateGroups = result.duplicateGroups.map { group in
+            guard group.allowsRemoval else { return group }
+            let recommendation = recommendationService.recommendation(for: group, options: options)
+            return DuplicateGroup(
+                id: group.id,
+                files: group.files,
+                sha256: group.sha256,
+                verificationLevel: group.verificationLevel,
+                recommendedKeepFileID: recommendation.keepFileID,
+                recommendedRemovalFileIDs: recommendation.removalFileIDs,
+                recommendationReasons: recommendation.reasons
+            )
+        }
+        scanResult = result
+        selectedRemovalFileIDs = Set(result.duplicateGroups.flatMap(\.recommendedRemovalFileIDs))
+        statusMessage = options.preferredFolderPaths.isEmpty ? "Keep priority cleared." : "Keep priority applied to all groups."
+    }
+
+    private func savePreferredFolders() {
+        var settings = appSettingsService.load()
+        settings.preferredFolderPaths = options.preferredFolderPaths
+        try? appSettingsService.save(settings)
+    }
+
+    private static func canonicalFolderPath(_ path: String) -> String {
+        URL(fileURLWithPath: path).resolvingSymlinksInPath().standardizedFileURL.path
+    }
+
     public func startScan() {
         guard !folders.isEmpty else {
             statusMessage = "Add a folder first"
@@ -125,6 +201,9 @@ public final class MainViewModel: ObservableObject {
         guard options.matchMode != .metadata || options.metadataCriteria.hasSelection else {
             statusMessage = "Select at least one metadata field."
             return
+        }
+        if options.matchMode == .exactContent {
+            options.compareMode = .safe
         }
         scanTask?.cancel()
         scanState = .indexing
@@ -213,7 +292,7 @@ public final class MainViewModel: ObservableObject {
 
     public func setRemovalSelection(_ selected: Bool, file: ScannedFile, group: DuplicateGroup) {
         guard group.allowsRemoval else {
-            statusMessage = "Run Exact Content comparison before moving metadata matches to Trash."
+            statusMessage = "Run Exact matching before moving metadata matches to Trash."
             return
         }
         let groupIDs = Set(group.files.map(\.id))
@@ -246,7 +325,7 @@ public final class MainViewModel: ObservableObject {
 
     public func markFileToKeep(_ file: ScannedFile, in group: DuplicateGroup) {
         guard group.allowsRemoval else {
-            statusMessage = "Metadata matches are review-only. Run Exact Content to verify them."
+            statusMessage = "Metadata matches are review-only. Run Exact matching to verify them."
             return
         }
         let groupIDs = Set(group.files.map(\.id))

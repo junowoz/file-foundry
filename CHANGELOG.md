@@ -2,6 +2,25 @@
 
 All notable changes to Doppel will be documented in this file.
 
+## [0.2.1] - 2026-08-25
+
+### Added
+
+- Added persistent, ordered Keep Priority locations that automatically choose the preferred copy across every exact duplicate group.
+- Added nested-folder priority so a preferred subfolder can outrank its parent library or another sibling folder.
+
+### Changed
+
+- Replaced removal checkboxes with a keep-first, single-choice control for each exact duplicate group.
+- Simplified Exact matching so the app always performs SHA-256 hashing followed by full byte-for-byte confirmation.
+- Reworked the results list with a stable lazy scroll layout and cleaner group/file rows.
+- Simplified and reorganized the sidebar scan controls.
+
+### Fixed
+
+- Fixed result-list scroll jumps when changing which duplicate copy should be kept.
+- Normalized macOS path aliases before applying or saving Keep Priority locations.
+
 ## [0.2.0] - 2026-08-25
 
 ### Added

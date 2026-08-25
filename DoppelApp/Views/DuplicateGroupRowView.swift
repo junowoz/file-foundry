@@ -22,12 +22,9 @@ struct DuplicateGroupRowView: View {
 
             Spacer()
 
-            Text(group.verificationLevel.label)
+            Label(group.verificationLevel.label, systemImage: group.allowsRemoval ? "checkmark.shield" : "magnifyingglass")
                 .font(.caption)
-                .padding(.horizontal, 7)
-                .padding(.vertical, 3)
-                .background(.blue.opacity(0.12), in: Capsule())
-                .foregroundStyle(.blue)
+                .foregroundStyle(group.allowsRemoval ? .blue : .secondary)
         }
         .padding(.vertical, 4)
     }
@@ -36,6 +33,6 @@ struct DuplicateGroupRowView: View {
         if group.allowsRemoval {
             return "\(selectedRemovalCount) removable · \(AppFormatters.fileSize(group.size)) each · saves \(AppFormatters.fileSize(selectedSavings))"
         }
-        return "Review only · verify with Exact Content before cleanup"
+        return "Review only · verify with Exact matching before cleanup"
     }
 }

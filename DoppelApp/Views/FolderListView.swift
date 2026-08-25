@@ -19,6 +19,7 @@ struct FolderListView: View {
                 }
             }
             .listStyle(.sidebar)
+            .frame(minHeight: 110, idealHeight: 170, maxHeight: 240)
 
             HStack {
                 Button(action: addFolder) {

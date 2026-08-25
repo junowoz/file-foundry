@@ -23,13 +23,15 @@ Doppel is organized around a testable core and a native SwiftUI shell.
 1. Scan user-selected folders.
 2. Skip hidden files, symlinks, and macOS packages according to options.
 3. Retain the selected root for each indexed file and apply the chosen Anywhere, Between Folders, or Within Each Folder scope.
-4. In Exact Content mode, group by size and hash candidates.
-5. Confirm exact matches with byte-by-byte comparison in Safe and Paranoid modes.
+4. In Exact mode, group by size and hash candidates.
+5. Confirm Exact-mode matches with a full byte-by-byte comparison after SHA-256 hashing.
 6. In Metadata mode, group review candidates by the selected filename, duration, file kind, and extension criteria.
 7. Recommend removals only for exact groups; metadata groups never cross the file-action boundary.
 
 ## Safety Boundary
 
-Only `FileActionService` moves files. It rejects metadata groups and validates existence, size, SHA-256, and byte comparison in Safe and Paranoid modes before calling `FileManager.trashItem`.
+Only `FileActionService` moves files. It rejects metadata groups and validates existence, size, SHA-256, and byte comparison before calling `FileManager.trashItem`.
+
+`RecommendationService` applies ordered preferred-folder paths before fallback filename, temporary-folder, and path-length heuristics. The first matching preferred location wins, allowing a nested folder to outrank its parent when ordered first.
 
 Only `AppUpdateService` downloads updates. It uses an ephemeral URL session, validates the release ZIP checksum, validates the extracted app bundle, and stages files in a temporary directory before installation.

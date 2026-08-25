@@ -76,6 +76,7 @@ public struct ScanOptions: Codable, Hashable, Sendable {
     public var matchMode: MatchMode
     public var searchScope: SearchScope
     public var metadataCriteria: MetadataMatchCriteria
+    public var preferredFolderPaths: [String]
     public var primaryFolderPaths: Set<String>
 
     public init(
@@ -89,6 +90,7 @@ public struct ScanOptions: Codable, Hashable, Sendable {
         matchMode: MatchMode = .exactContent,
         searchScope: SearchScope = .anywhere,
         metadataCriteria: MetadataMatchCriteria = MetadataMatchCriteria(),
+        preferredFolderPaths: [String] = [],
         primaryFolderPaths: Set<String> = []
     ) {
         self.includeSubfolders = includeSubfolders
@@ -101,6 +103,7 @@ public struct ScanOptions: Codable, Hashable, Sendable {
         self.matchMode = matchMode
         self.searchScope = searchScope
         self.metadataCriteria = metadataCriteria
+        self.preferredFolderPaths = preferredFolderPaths
         self.primaryFolderPaths = primaryFolderPaths
     }
 }

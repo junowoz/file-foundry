@@ -5,6 +5,7 @@ import SwiftUI
 struct SidebarView: View {
     @ObservedObject var viewModel: MainViewModel
     @Binding var selectedFolder: URL?
+    @State private var showKeepRules = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -16,11 +17,34 @@ struct SidebarView: View {
                 clearFolders: viewModel.clearFolders
             )
 
+            Button {
+                showKeepRules = true
+            } label: {
+                HStack {
+                    Label("Keep Priority", systemImage: "star")
+                    Spacer()
+                    if !viewModel.options.preferredFolderPaths.isEmpty {
+                        Text("\(viewModel.options.preferredFolderPaths.count)")
+                            .foregroundStyle(.secondary)
+                    }
+                    Image(systemName: "chevron.right")
+                        .foregroundStyle(.tertiary)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 11)
+            .help("Choose which folders win when exact copies are found.")
+
             Divider()
 
             ScanOptionsView(options: $viewModel.options)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 10)
+        }
+        .sheet(isPresented: $showKeepRules) {
+            KeepRulesView(viewModel: viewModel)
         }
     }
 
