@@ -35,6 +35,10 @@ Before a move:
 
 Metadata matches are intentionally outside this action boundary. They receive no automatic removal plan or savings estimate, and UI and service-level guards reject Trash actions until Exact verification succeeds.
 
+## Audit Reports
+
+Audit JSON export is local and does not trigger a network request. Reports include full file and folder paths, hashes, and current Keep or Trash selections. Users should treat those paths as potentially sensitive and review the file before sharing it with any external service or LLM.
+
 ## Packages, Symlinks, Hardlinks
 
 macOS packages and symlinks are ignored by default. Hardlinks are marked as same underlying files so users can review them carefully.

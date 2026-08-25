@@ -34,4 +34,6 @@ Only `FileActionService` moves files. It rejects metadata groups and validates e
 
 `RecommendationService` applies ordered preferred-folder paths before fallback filename, temporary-folder, and path-length heuristics. The first matching preferred location wins, allowing a nested folder to outrank its parent when ordered first.
 
+`ReportExportService` creates a local, selection-aware audit JSON from duplicate groups only. It records per-file hashes and current actions, group verification state, ordered preferred-folder matches, and machine-readable consistency checks without performing network requests.
+
 Only `AppUpdateService` downloads updates. It uses an ephemeral URL session, validates the release ZIP checksum, validates the extracted app bundle, and stages files in a temporary directory before installation.

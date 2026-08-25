@@ -2,6 +2,19 @@
 
 All notable changes to Doppel will be documented in this file.
 
+## [0.2.2] - 2026-08-25
+
+### Added
+
+- Added an LLM-friendly audit JSON export for every duplicate group found in the current scan.
+- Added explicit current `keep`, `trash`, and `review` actions for every reported path.
+- Added group and file SHA-256 evidence, byte-for-byte status, ordered Keep Priority matches, and machine-readable audit issues.
+
+### Changed
+
+- JSON export now reflects the live UI selection instead of only the initial recommendation.
+- Reports now contain only duplicate groups found by the scan and omit unrelated indexed or skipped files.
+
 ## [0.2.1] - 2026-08-25
 
 ### Added

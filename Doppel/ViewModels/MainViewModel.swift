@@ -379,9 +379,12 @@ public final class MainViewModel: ObservableObject {
 
     public func exportJSON(to url: URL) throws {
         guard let result = scanResult else { return }
-        let data = try reportExportService.jsonData(for: result)
+        let data = try reportExportService.jsonData(
+            for: result,
+            selectedRemovalFileIDs: selectedRemovalFileIDs
+        )
         try data.write(to: url, options: .atomic)
-        statusMessage = "Exported JSON"
+        statusMessage = "Exported audit JSON"
     }
 
     private func applyScanResult(_ result: ScanResult) {

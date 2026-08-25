@@ -62,9 +62,10 @@ struct MainView: View {
                 Button {
                     chooseJSONExport()
                 } label: {
-                    Label("Export JSON", systemImage: "square.and.arrow.up")
+                    Label("Export Audit JSON", systemImage: "square.and.arrow.up")
                 }
                 .disabled(viewModel.scanResult == nil)
+                .help("Export all found groups, hashes, paths, and current Keep or Trash selections. Full local paths are included.")
 
                 Button {
                     showUpdater = true
@@ -106,7 +107,7 @@ struct MainView: View {
     private func chooseJSONExport() {
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.json]
-        panel.nameFieldStringValue = "doppel-report.json"
+        panel.nameFieldStringValue = "doppel-audit-report.json"
         panel.canCreateDirectories = true
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {

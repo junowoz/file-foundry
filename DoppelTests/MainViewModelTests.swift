@@ -125,6 +125,38 @@ final class MainViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.options.compareMode, .safe)
     }
 
+    func testExportJSONWritesCurrentUISelectionToDisk() throws {
+        try withTemporaryDirectory { directory in
+            let hash = "same-hash"
+            let first = try ScannedFile(url: writeFile(directory, "first.wav", makeData("same"))).with(sha256: hash)
+            let second = try ScannedFile(url: writeFile(directory, "second.wav", makeData("same"))).with(sha256: hash)
+            let group = DuplicateGroup(
+                files: [first, second],
+                sha256: hash,
+                verificationLevel: .byteByByteConfirmed,
+                recommendedKeepFileID: first.id,
+                recommendedRemovalFileIDs: [second.id]
+            )
+            let viewModel = makeViewModel()
+            viewModel.scanResult = scanResult(group: group)
+            viewModel.selectedRemovalFileIDs = [first.id]
+            let reportURL = directory.appendingPathComponent("audit.json")
+
+            try viewModel.exportJSON(to: reportURL)
+
+            let data = try Data(contentsOf: reportURL)
+            let object = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+            let groups = try XCTUnwrap(object["groups"] as? [[String: Any]])
+            let files = try XCTUnwrap(groups.first?["files"] as? [[String: Any]])
+            let firstExport = try XCTUnwrap(files.first { $0["path"] as? String == first.path })
+            let secondExport = try XCTUnwrap(files.first { $0["path"] as? String == second.path })
+
+            XCTAssertEqual(firstExport["selectedAction"] as? String, "trash")
+            XCTAssertEqual(secondExport["selectedAction"] as? String, "keep")
+            XCTAssertEqual(viewModel.statusMessage, "Exported audit JSON")
+        }
+    }
+
     private func makeViewModel() -> MainViewModel {
         let defaults = UserDefaults(suiteName: UUID().uuidString)!
         return MainViewModel(appSettingsService: AppSettingsService(defaults: defaults))

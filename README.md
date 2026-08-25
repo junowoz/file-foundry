@@ -41,7 +41,7 @@ After downloading the DMG, open it and drag `Doppel.app` to Applications. Builds
 - iPhone-style copy name handling such as `IMG_4472.HEIC` and `IMG_4472 2.heic`.
 - Native SwiftUI interface with sidebar, duplicate groups, and preview details.
 - Move selected duplicates to Trash. Doppel never deletes files permanently.
-- Export JSON reports.
+- Export an LLM-friendly audit JSON with every found group, hash, path, Keep Priority match, and current Keep or Trash selection.
 - Built-in updater that checks GitHub Releases, downloads the app archive, verifies the published SHA-256 checksum, validates the app bundle, installs, relaunches, and removes temporary update files.
 
 ## Security And Privacy
@@ -97,7 +97,22 @@ Verification levels shown in the app:
 5. Click **Scan**.
 6. Review each duplicate group and select the one copy to keep.
 7. Move selected duplicates to Trash only after reviewing them.
-8. Export a JSON report if you want an audit trail.
+8. Click **Export Audit JSON** to save all found groups and current selections for independent review.
+
+## Audit JSON
+
+The audit report is designed for bulk review by a person, script, or LLM. It includes only duplicate groups found in the current scan, not unrelated indexed files or skipped files.
+
+For every group, the report records:
+
+- The group SHA-256 and every file SHA-256.
+- Whether all exported SHA-256 values match.
+- Whether Doppel completed byte-for-byte confirmation.
+- The exact current action for every path: `keep`, `trash`, or `review`.
+- Ordered Keep Priority matches and whether the selected Keep path uses the highest matching priority.
+- Machine-readable `auditIssues` when a selection or verification check needs attention.
+
+The report contains full local paths. Review it before sharing because folder and filenames can contain private information. Exporting is entirely local and does not send the report anywhere.
 
 ## Screenshots
 
@@ -163,7 +178,7 @@ The release script builds an `arm64` app bundle, embeds the app icon and updater
 swift test
 ```
 
-The test suite covers SHA-256 hashing, partial hashing, byte comparison, cross-folder and within-folder scopes, filename/duration/kind/extension metadata matching, package skipping, recommendation rules, JSON/CSV export, and pre-action validation.
+The test suite covers SHA-256 hashing, partial hashing, byte comparison, cross-folder and within-folder scopes, filename/duration/kind/extension metadata matching, package skipping, recommendation rules, selection-aware audit JSON/CSV export, and pre-action validation.
 
 ## Signing And Notarization
 
@@ -185,7 +200,7 @@ Do not commit real secrets.
 ## Known Limitations
 
 - Metadata duration is rounded to the nearest second and is available for audio/video formats supported by macOS AVFoundation.
-- CSV export exists in the core service and is planned for the UI in v0.2.2.
+- CSV export exists in the core service and is planned for a future UI update.
 - Review-folder moves, richer progress controls, security-scoped bookmark persistence, video thumbnails, and iCloud-specific handling are planned after the MVP.
 - APFS clone savings can differ from logical file size.
 - Hardlinks are detected as same underlying files and should be reviewed carefully.
@@ -200,7 +215,8 @@ Do not commit real secrets.
 - v0.1.5: Sandbox-safe update validation without `lipo` or `codesign` subprocesses.
 - v0.2.0: Cross-folder and within-folder scopes, configurable filename/duration/kind/extension matching, and strict review-only safety for metadata candidates.
 - v0.2.1: Stable keep-first results UI, ordered preferred-folder rules, and mandatory byte-for-byte Exact verification.
-- v0.2.2: CSV export UI, review folder moves, and progress improvements.
+- v0.2.2: Selection-aware audit JSON for bulk hash, route, and Keep Priority review.
+- v0.2.3: CSV export UI, review folder moves, and progress improvements.
 - v0.3.0: Video previews, file filters, minimum size polish, security-scoped bookmark persistence, iCloud handling.
 - v1.0.0: Signing, notarization, polished DMG, expanded tests, stable security and privacy policies.
 
