@@ -1,3 +1,4 @@
+import AVFoundation
 import Foundation
 
 public struct FileScanOutput: Sendable {
@@ -24,10 +25,19 @@ public final class FileScannerService: @unchecked Sendable {
     public func scan(folders: [URL], options: ScanOptions) async throws -> FileScanOutput {
         var files: [ScannedFile] = []
         var skipped: [ScannedFile] = []
+        var seenPaths: Set<String> = []
 
         for folder in folders {
             try Task.checkCancellation()
-            try await scan(url: folder, options: options, files: &files, skipped: &skipped, isRoot: true)
+            try await scan(
+                url: folder,
+                sourceFolder: folder,
+                options: options,
+                files: &files,
+                skipped: &skipped,
+                seenPaths: &seenPaths,
+                isRoot: true
+            )
         }
 
         return FileScanOutput(files: files, skippedFiles: skipped)
@@ -35,9 +45,11 @@ public final class FileScannerService: @unchecked Sendable {
 
     private func scan(
         url: URL,
+        sourceFolder: URL,
         options: ScanOptions,
         files: inout [ScannedFile],
         skipped: inout [ScannedFile],
+        seenPaths: inout Set<String>,
         isRoot: Bool
     ) async throws {
         try Task.checkCancellation()
@@ -82,17 +94,20 @@ public final class FileScannerService: @unchecked Sendable {
                 let childValues = try? child.resourceValues(forKeys: [.isDirectoryKey])
                 if childValues?.isDirectory == true {
                     if options.includeSubfolders {
-                        try await scan(url: child, options: options, files: &files, skipped: &skipped, isRoot: false)
+                        try await scan(url: child, sourceFolder: sourceFolder, options: options, files: &files, skipped: &skipped, seenPaths: &seenPaths, isRoot: false)
                     }
                 } else {
-                    try await scan(url: child, options: options, files: &files, skipped: &skipped, isRoot: false)
+                    try await scan(url: child, sourceFolder: sourceFolder, options: options, files: &files, skipped: &skipped, seenPaths: &seenPaths, isRoot: false)
                 }
             }
             return
         }
 
         do {
-            let file = try ScannedFile(url: url)
+            let standardizedPath = url.standardizedFileURL.path
+            guard seenPaths.insert(standardizedPath).inserted else { return }
+
+            var file = try ScannedFile(url: url, sourceFolderURL: sourceFolder)
             guard file.isReadable else {
                 skipped.append(file.with(error: "File is not readable"))
                 return
@@ -103,6 +118,11 @@ public final class FileScannerService: @unchecked Sendable {
             guard options.fileTypeFilter.allows(file) else {
                 return
             }
+            if options.matchMode == .metadata,
+               options.metadataCriteria.duration,
+               file.fileKind == .audio || file.fileKind == .video {
+                file.mediaDurationSeconds = await mediaDuration(for: url)
+            }
             files.append(file)
             fileDidIndex?(file)
         } catch {
@@ -111,5 +131,11 @@ public final class FileScannerService: @unchecked Sendable {
                 skipped.append(skippedFile)
             }
         }
+    }
+
+    private func mediaDuration(for url: URL) async -> Double? {
+        guard let duration = try? await AVURLAsset(url: url).load(.duration) else { return nil }
+        let seconds = duration.seconds
+        return seconds.isFinite && seconds >= 0 ? seconds : nil
     }
 }

@@ -78,4 +78,23 @@ final class FileActionServiceTests: XCTestCase {
             }
         }
     }
+
+    func testValidationRejectsMetadataMatch() throws {
+        try withTemporaryDirectory { directory in
+            let keep = try ScannedFile(url: writeFile(directory, "track.wav", makeData("first")))
+            let remove = try ScannedFile(url: writeFile(directory, "track.mp3", makeData("second")))
+            let group = DuplicateGroup(files: [keep, remove], sha256: "", verificationLevel: .metadataMatch)
+
+            XCTAssertThrowsError(
+                try FileActionService().validateMovePlan(
+                    group: group,
+                    keepFileID: keep.id,
+                    removalFileIDs: [remove.id],
+                    compareMode: .safe
+                )
+            ) { error in
+                XCTAssertEqual(error as? FileActionError, .unverifiedMetadataMatch)
+            }
+        }
+    }
 }

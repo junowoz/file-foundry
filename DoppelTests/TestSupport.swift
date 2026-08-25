@@ -37,3 +37,27 @@ func writeFile(_ directory: URL, _ name: String, _ contents: Data) throws -> URL
 func makeData(_ string: String) -> Data {
     Data(string.utf8)
 }
+
+func makeWaveData(seconds: Int = 1, sampleByte: UInt8) -> Data {
+    let sampleRate: UInt32 = 8_000
+    let dataSize = UInt32(seconds) * sampleRate
+    var data = Data("RIFF".utf8)
+    appendLittleEndian(UInt32(36) + dataSize, to: &data)
+    data.append(Data("WAVEfmt ".utf8))
+    appendLittleEndian(UInt32(16), to: &data)
+    appendLittleEndian(UInt16(1), to: &data)
+    appendLittleEndian(UInt16(1), to: &data)
+    appendLittleEndian(sampleRate, to: &data)
+    appendLittleEndian(sampleRate, to: &data)
+    appendLittleEndian(UInt16(1), to: &data)
+    appendLittleEndian(UInt16(8), to: &data)
+    data.append(Data("data".utf8))
+    appendLittleEndian(dataSize, to: &data)
+    data.append(Data(repeating: sampleByte, count: Int(dataSize)))
+    return data
+}
+
+private func appendLittleEndian<T: FixedWidthInteger>(_ value: T, to data: inout Data) {
+    var littleEndian = value.littleEndian
+    withUnsafeBytes(of: &littleEndian) { data.append(contentsOf: $0) }
+}

@@ -51,6 +51,26 @@ final class MainViewModelTests: XCTestCase {
         }
     }
 
+    func testMetadataMatchCannotBeSelectedForRemoval() throws {
+        try withTemporaryDirectory { directory in
+            let first = try ScannedFile(url: writeFile(directory, "track.wav", makeData("first")))
+            let second = try ScannedFile(url: writeFile(directory, "track.mp3", makeData("second")))
+            let group = DuplicateGroup(
+                files: [first, second],
+                sha256: "",
+                verificationLevel: .metadataMatch
+            )
+            let viewModel = MainViewModel()
+            viewModel.scanResult = scanResult(group: group)
+
+            viewModel.setRemovalSelection(true, file: second, group: group)
+
+            XCTAssertTrue(viewModel.selectedRemovalFileIDs.isEmpty)
+            XCTAssertFalse(viewModel.canMoveSelectedFiles)
+            XCTAssertEqual(viewModel.statusMessage, "Run Exact Content comparison before moving metadata matches to Trash.")
+        }
+    }
+
     private func scanResult(group: DuplicateGroup) -> ScanResult {
         ScanResult(
             selectedFolders: [],

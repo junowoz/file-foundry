@@ -9,6 +9,7 @@ public struct ScannedFile: Identifiable, Codable, Equatable, Hashable, Sendable 
     public var filename: String
     public var fileExtension: String
     public var normalizedFilename: String
+    public var sourceFolderPath: String
     public var size: Int64
     public var allocatedSize: Int64?
     public var creationDate: Date?
@@ -19,6 +20,7 @@ public struct ScannedFile: Identifiable, Codable, Equatable, Hashable, Sendable 
     public var isPackage: Bool
     public var isReadable: Bool
     public var fileKind: FileKind
+    public var mediaDurationSeconds: Double?
     public var partialHash: String?
     public var sha256: String?
     public var fileResourceIdentifier: String?
@@ -27,6 +29,8 @@ public struct ScannedFile: Identifiable, Codable, Equatable, Hashable, Sendable 
     public init(
         id: ID = UUID(),
         url: URL,
+        sourceFolderURL: URL? = nil,
+        mediaDurationSeconds: Double? = nil,
         partialHash: String? = nil,
         sha256: String? = nil,
         error: String? = nil
@@ -53,6 +57,7 @@ public struct ScannedFile: Identifiable, Codable, Equatable, Hashable, Sendable 
         self.filename = filename
         self.fileExtension = url.pathExtension
         self.normalizedFilename = filename.normalizedForRecommendation
+        self.sourceFolderPath = (sourceFolderURL ?? url.deletingLastPathComponent()).standardizedFileURL.path
         self.size = Int64(values.fileSize ?? 0)
         self.allocatedSize = values.totalFileAllocatedSize.map(Int64.init) ?? values.fileAllocatedSize.map(Int64.init)
         self.creationDate = values.creationDate
@@ -63,6 +68,7 @@ public struct ScannedFile: Identifiable, Codable, Equatable, Hashable, Sendable 
         self.isPackage = values.isPackage ?? Self.hasPackageExtension(url)
         self.isReadable = values.isReadable ?? FileManager.default.isReadableFile(atPath: url.path)
         self.fileKind = FileKind.classify(url: url, typeIdentifier: values.typeIdentifier)
+        self.mediaDurationSeconds = mediaDurationSeconds
         self.partialHash = partialHash
         self.sha256 = sha256
         self.fileResourceIdentifier = values.fileResourceIdentifier.map { String(describing: $0) }

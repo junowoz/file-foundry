@@ -2,7 +2,7 @@
 
 ## Supported Versions
 
-The first public version is v0.1.0. Security fixes target the latest released version.
+Security fixes target the latest released version.
 
 ## Reporting A Vulnerability
 
@@ -25,6 +25,7 @@ Include:
 - Doppel must move files to Trash with `FileManager.trashItem`.
 - Doppel must revalidate files before moving them.
 - Doppel must keep at least one file in every duplicate group.
+- Doppel must treat metadata matches as review-only and reject file actions for unverified groups.
 - Doppel must validate update ZIP checksums, app bundle identity, version, architecture, and code signature before installation.
 
 ## Release Integrity

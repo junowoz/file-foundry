@@ -33,8 +33,9 @@ public struct DuplicateGroup: Identifiable, Codable, Equatable, Hashable, Sendab
         self.files = files
         self.sha256 = sha256
         self.size = size
-        self.totalLogicalWastedBytes = Int64(wastedCount) * size
-        self.totalAllocatedWastedBytes = allocatedSizes.isEmpty ? 0 : allocatedSizes.dropFirst().reduce(0, +)
+        let isExactMatch = verificationLevel != .metadataMatch
+        self.totalLogicalWastedBytes = isExactMatch ? Int64(wastedCount) * size : 0
+        self.totalAllocatedWastedBytes = isExactMatch && !allocatedSizes.isEmpty ? allocatedSizes.dropFirst().reduce(0, +) : 0
         self.recommendedKeepFileID = recommendedKeepFileID
         self.recommendedRemovalFileIDs = recommendedRemovalFileIDs
         self.verificationLevel = verificationLevel
@@ -44,5 +45,9 @@ public struct DuplicateGroup: Identifiable, Codable, Equatable, Hashable, Sendab
 
     public var removableCount: Int {
         recommendedRemovalFileIDs.count
+    }
+
+    public var allowsRemoval: Bool {
+        verificationLevel != .metadataMatch
     }
 }

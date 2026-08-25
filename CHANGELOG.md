@@ -2,6 +2,21 @@
 
 All notable changes to Doppel will be documented in this file.
 
+## [0.2.0] - 2026-08-25
+
+### Added
+
+- Added explicit Anywhere, Between Folders, and Within Each Folder search scopes.
+- Added review-only metadata matching with combinable filename, media duration, file kind, and file extension criteria.
+- Added native AVFoundation duration reading for supported audio and video files.
+- Added tests for cross-folder matching, internal matching, metadata combinations, duration matching, and cleanup safety.
+
+### Changed
+
+- Recursive scans now retain each file's selected root and avoid indexing the same standardized path twice when selected folders overlap.
+- Metadata candidates never receive removal recommendations or potential savings estimates.
+- Trash controls remain disabled until files are confirmed through Exact Content matching.
+
 ## [0.1.5] - 2026-06-08
 
 ### Fixed

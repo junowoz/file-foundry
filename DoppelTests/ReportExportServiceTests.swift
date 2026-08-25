@@ -17,7 +17,7 @@ final class ReportExportServiceTests: XCTestCase {
             let data = try ReportExportService().jsonData(for: result)
             let object = try JSONSerialization.jsonObject(with: data) as? [String: Any]
 
-            XCTAssertEqual(object?["appVersion"] as? String, "0.1.0")
+            XCTAssertEqual(object?["appVersion"] as? String, AppMetadata.version)
             XCTAssertNotNil(object?["groups"])
         }
     }

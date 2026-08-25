@@ -6,6 +6,35 @@ public enum CompareMode: String, Codable, Hashable, CaseIterable, Sendable {
     case paranoid
 }
 
+public enum MatchMode: String, Codable, Hashable, CaseIterable, Sendable {
+    case exactContent
+    case metadata
+}
+
+public enum SearchScope: String, Codable, Hashable, CaseIterable, Sendable {
+    case anywhere
+    case betweenFolders
+    case withinFolders
+}
+
+public struct MetadataMatchCriteria: Codable, Hashable, Sendable {
+    public var filename: Bool
+    public var duration: Bool
+    public var fileKind: Bool
+    public var fileExtension: Bool
+
+    public init(filename: Bool = true, duration: Bool = false, fileKind: Bool = false, fileExtension: Bool = false) {
+        self.filename = filename
+        self.duration = duration
+        self.fileKind = fileKind
+        self.fileExtension = fileExtension
+    }
+
+    public var hasSelection: Bool {
+        filename || duration || fileKind || fileExtension
+    }
+}
+
 public enum FileTypeFilter: Codable, Hashable, Sendable {
     case all
     case images
@@ -44,6 +73,9 @@ public struct ScanOptions: Codable, Hashable, Sendable {
     public var minimumFileSize: Int64
     public var fileTypeFilter: FileTypeFilter
     public var compareMode: CompareMode
+    public var matchMode: MatchMode
+    public var searchScope: SearchScope
+    public var metadataCriteria: MetadataMatchCriteria
     public var primaryFolderPaths: Set<String>
 
     public init(
@@ -54,6 +86,9 @@ public struct ScanOptions: Codable, Hashable, Sendable {
         minimumFileSize: Int64 = 0,
         fileTypeFilter: FileTypeFilter = .all,
         compareMode: CompareMode = .safe,
+        matchMode: MatchMode = .exactContent,
+        searchScope: SearchScope = .anywhere,
+        metadataCriteria: MetadataMatchCriteria = MetadataMatchCriteria(),
         primaryFolderPaths: Set<String> = []
     ) {
         self.includeSubfolders = includeSubfolders
@@ -63,6 +98,9 @@ public struct ScanOptions: Codable, Hashable, Sendable {
         self.minimumFileSize = minimumFileSize
         self.fileTypeFilter = fileTypeFilter
         self.compareMode = compareMode
+        self.matchMode = matchMode
+        self.searchScope = searchScope
+        self.metadataCriteria = metadataCriteria
         self.primaryFolderPaths = primaryFolderPaths
     }
 }

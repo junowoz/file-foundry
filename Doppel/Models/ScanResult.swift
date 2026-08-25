@@ -10,7 +10,7 @@ public struct ScanResult: Codable, Equatable, Hashable, Sendable {
     public var duplicateGroups: [DuplicateGroup]
 
     public init(
-        appVersion: String = "0.1.0",
+        appVersion: String = AppMetadata.version,
         scanDate: Date = Date(),
         selectedFolders: [URL],
         options: ScanOptions,

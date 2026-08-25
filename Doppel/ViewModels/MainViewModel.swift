@@ -85,6 +85,13 @@ public final class MainViewModel: ObservableObject {
         !selectedRemovalFileIDs.isEmpty && scanState != .movingToTrash
     }
 
+    public var canStartScan: Bool {
+        guard scanState != .indexing, !folders.isEmpty else { return false }
+        if options.searchScope == .betweenFolders && folders.count < 2 { return false }
+        if options.matchMode == .metadata && !options.metadataCriteria.hasSelection { return false }
+        return true
+    }
+
     public func addFolder(_ folder: URL) {
         guard !folders.contains(folder) else { return }
         folders.append(folder)
@@ -109,6 +116,14 @@ public final class MainViewModel: ObservableObject {
     public func startScan() {
         guard !folders.isEmpty else {
             statusMessage = "Add a folder first"
+            return
+        }
+        guard options.searchScope != .betweenFolders || folders.count > 1 else {
+            statusMessage = "Add at least two folders for Between Folders."
+            return
+        }
+        guard options.matchMode != .metadata || options.metadataCriteria.hasSelection else {
+            statusMessage = "Select at least one metadata field."
             return
         }
         scanTask?.cancel()
@@ -197,6 +212,10 @@ public final class MainViewModel: ObservableObject {
     }
 
     public func setRemovalSelection(_ selected: Bool, file: ScannedFile, group: DuplicateGroup) {
+        guard group.allowsRemoval else {
+            statusMessage = "Run Exact Content comparison before moving metadata matches to Trash."
+            return
+        }
         let groupIDs = Set(group.files.map(\.id))
         guard groupIDs.contains(file.id) else { return }
 
@@ -226,6 +245,10 @@ public final class MainViewModel: ObservableObject {
     }
 
     public func markFileToKeep(_ file: ScannedFile, in group: DuplicateGroup) {
+        guard group.allowsRemoval else {
+            statusMessage = "Metadata matches are review-only. Run Exact Content to verify them."
+            return
+        }
         let groupIDs = Set(group.files.map(\.id))
         guard groupIDs.contains(file.id), group.files.count > 1 else {
             statusMessage = "At least one file is always kept."
@@ -288,7 +311,7 @@ public final class MainViewModel: ObservableObject {
         selectedFileID = result.duplicateGroups.first?.files.first?.id
         selectedRemovalFileIDs = Set(result.duplicateGroups.flatMap(\.recommendedRemovalFileIDs))
         scanState = .finished
-        statusMessage = result.duplicateGroups.isEmpty ? "No exact duplicates found" : "Finished"
+        statusMessage = result.duplicateGroups.isEmpty ? "No matches found" : "Finished"
     }
 
     private func applyRemovalSelection(_ selectedInGroup: Set<ScannedFile.ID>, in group: DuplicateGroup) {

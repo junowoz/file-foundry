@@ -15,7 +15,7 @@ struct DuplicateGroupRowView: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text("\(group.files.count) matching files")
                     .font(.headline)
-                Text("\(selectedRemovalCount) removable · \(AppFormatters.fileSize(group.size)) each · saves \(AppFormatters.fileSize(selectedSavings))")
+                Text(summary)
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -30,5 +30,12 @@ struct DuplicateGroupRowView: View {
                 .foregroundStyle(.blue)
         }
         .padding(.vertical, 4)
+    }
+
+    private var summary: String {
+        if group.allowsRemoval {
+            return "\(selectedRemovalCount) removable · \(AppFormatters.fileSize(group.size)) each · saves \(AppFormatters.fileSize(selectedSavings))"
+        }
+        return "Review only · verify with Exact Content before cleanup"
     }
 }

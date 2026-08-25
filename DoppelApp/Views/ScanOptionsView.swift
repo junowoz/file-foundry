@@ -19,14 +19,53 @@ struct ScanOptionsView: View {
                 }
             }
 
-            Picker("Compare mode", selection: $options.compareMode) {
-                Text("Fast").tag(CompareMode.fast)
-                Text("Safe").tag(CompareMode.safe)
-                Text("Paranoid").tag(CompareMode.paranoid)
+            Picker("Find matches", selection: $options.matchMode) {
+                Text("Exact Content").tag(MatchMode.exactContent)
+                Text("Metadata").tag(MatchMode.metadata)
             }
             .pickerStyle(.segmented)
+
+            Picker("Search scope", selection: $options.searchScope) {
+                Text("Anywhere").tag(SearchScope.anywhere)
+                Text("Between folders").tag(SearchScope.betweenFolders)
+                Text("Within each folder").tag(SearchScope.withinFolders)
+            }
+
+            if options.matchMode == .exactContent {
+                Picker("Verification", selection: $options.compareMode) {
+                    Text("Fast").tag(CompareMode.fast)
+                    Text("Safe").tag(CompareMode.safe)
+                    Text("Paranoid").tag(CompareMode.paranoid)
+                }
+                .pickerStyle(.segmented)
+            } else {
+                Section("Match when these are equal") {
+                    Toggle("Filename", isOn: criterionBinding(\.filename))
+                    Toggle("Duration", isOn: criterionBinding(\.duration))
+                    Toggle("File kind", isOn: criterionBinding(\.fileKind))
+                    Toggle("File extension", isOn: criterionBinding(\.fileExtension))
+                }
+
+                if !options.metadataCriteria.hasSelection {
+                    Text("Select at least one matching field.")
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                } else {
+                    Text("Metadata results are review-only. Exact Content verification is required before Trash is enabled.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
         }
         .formStyle(.grouped)
+    }
+
+    private func criterionBinding(_ keyPath: WritableKeyPath<MetadataMatchCriteria, Bool>) -> Binding<Bool> {
+        Binding {
+            options.metadataCriteria[keyPath: keyPath]
+        } set: { value in
+            options.metadataCriteria[keyPath: keyPath] = value
+        }
     }
 
     private var fileTypeSelection: Binding<FileTypeChoice> {

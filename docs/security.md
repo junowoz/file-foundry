@@ -30,8 +30,10 @@ Before a move:
 2. Each selected removal file must still exist.
 3. Sizes must still match.
 4. SHA-256 must still match.
-5. Paranoid mode repeats byte-by-byte comparison.
+5. Safe and Paranoid modes repeat byte-by-byte comparison.
 6. A group cannot move every file.
+
+Metadata matches are intentionally outside this action boundary. They receive no automatic removal plan or savings estimate, and UI and service-level guards reject Trash actions until Exact Content verification succeeds.
 
 ## Packages, Symlinks, Hardlinks
 

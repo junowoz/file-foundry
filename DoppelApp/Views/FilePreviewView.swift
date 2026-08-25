@@ -30,7 +30,10 @@ struct FilePreviewView: View {
                         .textSelection(.enabled)
 
                     metadata(label: "Size", value: AppFormatters.fileSize(file.size))
-                    metadata(label: "SHA-256", value: group?.sha256 ?? file.sha256 ?? "Not available")
+                    if let duration = file.mediaDurationSeconds {
+                        metadata(label: "Duration", value: AppFormatters.duration(duration))
+                    }
+                    metadata(label: "SHA-256", value: group?.sha256.isEmpty == false ? group?.sha256 ?? "Not available" : "Not calculated")
                     metadata(label: "Verification", value: group?.verificationLevel.label ?? "Not available")
 
                     HStack {
@@ -55,14 +58,14 @@ struct FilePreviewView: View {
                             } label: {
                                 Label("Keep This File", systemImage: "checkmark.circle")
                             }
-                            .disabled(viewModel.reviewState(for: file, in: group) == .keep && viewModel.selectedRemovalCount(in: group) == group.files.count - 1)
+                            .disabled(!group.allowsRemoval || (viewModel.reviewState(for: file, in: group) == .keep && viewModel.selectedRemovalCount(in: group) == group.files.count - 1))
 
                             Button(role: .destructive) {
                                 viewModel.setRemovalSelection(true, file: file, group: group)
                             } label: {
                                 Label("Move File to Trash", systemImage: "trash")
                             }
-                            .disabled(viewModel.isSelectedForRemoval(file))
+                            .disabled(!group.allowsRemoval || viewModel.isSelectedForRemoval(file))
                         }
                     }
                 }

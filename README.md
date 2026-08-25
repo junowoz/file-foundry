@@ -5,7 +5,7 @@
 <h1 align="center">Doppel</h1>
 
 <p align="center">
-  <strong>Exact duplicate finder for macOS. Private, local, safe.</strong>
+  <strong>Duplicate finder for macOS. Exact when it matters, flexible when it helps.</strong>
 </p>
 
 <p align="center">
@@ -16,7 +16,7 @@
   <a href="docs/architecture.md">Architecture</a>
 </p>
 
-Doppel is a native Apple Silicon macOS app for finding exact duplicate files in one or more folders. It is built for local-first use: no login, no analytics, no telemetry, no tracking, and no external SDKs. The only in-app network feature is the user-triggered updater, which checks official GitHub Releases.
+Doppel is a native Apple Silicon macOS app for finding duplicates inside a folder or across multiple folders. It can verify exact copies with SHA-256 and byte-by-byte comparison, or find review candidates using any combination of filename, media duration, file kind, and file extension. It is local-first: no login, analytics, telemetry, tracking, or external SDKs. The only in-app network feature is the user-triggered updater, which checks official GitHub Releases.
 
 ## Download
 
@@ -30,7 +30,9 @@ After downloading the DMG, open it and drag `Doppel.app` to Applications. Builds
 
 ## Features
 
-- Recursive folder scanning with user-selected folders.
+- Recursive scanning of one or more user-selected folders, including nested subfolders.
+- Search scopes for matches anywhere, only between selected folders, or only within each selected folder.
+- Flexible metadata matching by filename, audio/video duration, file kind, file extension, or any combination.
 - Duplicate detection by size, SHA-256, and byte-by-byte confirmation in Safe and Paranoid modes.
 - Conservative recommendations that keep at least one file in every group.
 - Manual keep/remove selection before moving files to Trash.
@@ -54,12 +56,28 @@ Doppel is designed to be private by default.
 - Selected files are moved to Trash, never permanently deleted.
 - At least one file is always kept in each duplicate group.
 - Safe and Paranoid modes revalidate selected files before moving them.
+- Metadata matches are review-only: Trash actions and savings estimates stay disabled until an Exact Content scan confirms the files.
 
 Always review before moving files to the Trash.
 
 ## How Detection Works
 
-Doppel scans files, groups candidates by logical file size, calculates SHA-256 for same-sized candidates, and confirms matches byte by byte in Safe and Paranoid modes. Before moving files, Doppel revalidates the keep file and selected duplicate files.
+In **Exact Content** mode, Doppel groups files by logical size, calculates SHA-256 for candidates, and confirms matches byte by byte in Safe and Paranoid verification modes. Before moving files, Doppel revalidates the keep file and every selected duplicate.
+
+In **Metadata** mode, Doppel creates review-only groups from any selected combination of:
+
+- Filename, compared case-insensitively without the extension.
+- Audio or video duration, rounded to the nearest second.
+- File kind, such as audio, video, image, document, or archive.
+- File extension.
+
+Metadata matches can represent different encodings or unrelated files, so Doppel never recommends or moves them automatically. Run an Exact Content scan before cleanup.
+
+Search scopes:
+
+- **Anywhere** finds both internal duplicates and matches across selected folders.
+- **Between folders** only returns groups spanning at least two selected roots.
+- **Within each folder** finds internal duplicates and keeps results separated by selected root.
 
 Verification levels shown in the app:
 
@@ -67,12 +85,13 @@ Verification levels shown in the app:
 - Partial hash match.
 - SHA-256 match.
 - Byte-by-byte confirmed.
+- Metadata match (review only).
 
 ## How To Use
 
 1. Open Doppel.
-2. Click **Add Folder** and choose the folder you want to scan.
-3. Review the scan options in the sidebar.
+2. Click **Add Folder** and choose one or more folders.
+3. Choose a search scope and either **Exact Content** or **Metadata** matching.
 4. Click **Scan**.
 5. Review each duplicate group and choose which files stay or move to Trash.
 6. Move selected duplicates to Trash only after reviewing them.
@@ -142,7 +161,7 @@ The release script builds an `arm64` app bundle, embeds the app icon and updater
 swift test
 ```
 
-The test suite covers SHA-256 hashing, partial hashing, byte comparison, duplicate detection, package skipping, recommendation rules, JSON/CSV export, and pre-action validation.
+The test suite covers SHA-256 hashing, partial hashing, byte comparison, cross-folder and within-folder scopes, filename/duration/kind/extension metadata matching, package skipping, recommendation rules, JSON/CSV export, and pre-action validation.
 
 ## Signing And Notarization
 
@@ -163,8 +182,8 @@ Do not commit real secrets.
 
 ## Known Limitations
 
-- v0.1.x focuses on one or more selected folders, exact duplicates, Trash moves, and JSON export.
-- CSV export exists in the core service and is planned for the UI in v0.2.0.
+- Metadata duration is rounded to the nearest second and is available for audio/video formats supported by macOS AVFoundation.
+- CSV export exists in the core service and is planned for the UI in v0.2.1.
 - Review-folder moves, richer progress controls, security-scoped bookmark persistence, video thumbnails, and iCloud-specific handling are planned after the MVP.
 - APFS clone savings can differ from logical file size.
 - Hardlinks are detected as same underlying files and should be reviewed carefully.
@@ -177,7 +196,8 @@ Do not commit real secrets.
 - v0.1.3: Polished DMG installer layout with Applications shortcut and drag-to-install background.
 - v0.1.4: Manual keep/remove selection before moving duplicates to Trash.
 - v0.1.5: Sandbox-safe update validation without `lipo` or `codesign` subprocesses.
-- v0.2.0: Multiple folder polish, CSV export UI, image previews, review folder moves, progress improvements.
+- v0.2.0: Cross-folder and within-folder scopes, configurable filename/duration/kind/extension matching, and strict review-only safety for metadata candidates.
+- v0.2.1: CSV export UI, review folder moves, and progress improvements.
 - v0.3.0: Video previews, file filters, minimum size polish, security-scoped bookmark persistence, iCloud handling.
 - v1.0.0: Signing, notarization, polished DMG, expanded tests, stable security and privacy policies.
 

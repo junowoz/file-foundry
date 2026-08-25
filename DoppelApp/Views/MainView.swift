@@ -27,7 +27,7 @@ struct MainView: View {
                 } label: {
                     Label("Scan", systemImage: "play.fill")
                 }
-                .disabled(viewModel.folders.isEmpty || viewModel.scanState == .indexing)
+                .disabled(!viewModel.canStartScan)
 
                 Button {
                     viewModel.pauseScan()

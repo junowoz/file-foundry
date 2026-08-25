@@ -5,6 +5,7 @@ struct DuplicateFileRowView: View {
     var file: ScannedFile
     var isSelectedForRemoval: Bool
     var reviewState: FileReviewState
+    var allowsRemoval: Bool
     var toggleRemoval: () -> Void
     var keepFile: () -> Void
 
@@ -16,7 +17,8 @@ struct DuplicateFileRowView: View {
             }
             .buttonStyle(.plain)
             .frame(width: 20)
-            .help(isSelectedForRemoval ? "Keep this file" : "Move this file to Trash")
+            .disabled(!allowsRemoval)
+            .help(allowsRemoval ? (isSelectedForRemoval ? "Keep this file" : "Move this file to Trash") : "Verify with Exact Content before cleanup")
 
             Image(systemName: iconName)
                 .foregroundStyle(.secondary)
@@ -41,17 +43,19 @@ struct DuplicateFileRowView: View {
         .padding(.leading, 18)
         .padding(.vertical, 3)
         .contextMenu {
-            Button {
-                keepFile()
-            } label: {
-                Label("Keep This File", systemImage: "checkmark.circle")
-            }
-
-            if !isSelectedForRemoval {
-                Button(role: .destructive) {
-                    toggleRemoval()
+            if allowsRemoval {
+                Button {
+                    keepFile()
                 } label: {
-                    Label("Move File to Trash", systemImage: "trash")
+                    Label("Keep This File", systemImage: "checkmark.circle")
+                }
+
+                if !isSelectedForRemoval {
+                    Button(role: .destructive) {
+                        toggleRemoval()
+                    } label: {
+                        Label("Move File to Trash", systemImage: "trash")
+                    }
                 }
             }
         }
@@ -69,7 +73,7 @@ struct DuplicateFileRowView: View {
                     .foregroundStyle(.red)
                     .background(.red.opacity(0.12), in: Capsule())
             case .needsReview:
-                Text("Needs review")
+                Text(allowsRemoval ? "Needs review" : "Candidate")
                     .foregroundStyle(.yellow)
                     .background(.yellow.opacity(0.15), in: Capsule())
             }

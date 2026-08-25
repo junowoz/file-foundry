@@ -11,7 +11,7 @@ struct DuplicateGroupsView: View {
             } else if viewModel.duplicateGroups.isEmpty {
                 EmptyStateView(
                     title: "No duplicate groups",
-                    message: "Add a folder, scan it, and review exact duplicate matches before moving anything to Trash."
+                    message: "Add folders, choose a match mode, and review results before moving anything to Trash."
                 )
             } else {
                 List(selection: $viewModel.selectedGroupID) {
@@ -33,6 +33,7 @@ struct DuplicateGroupsView: View {
                                     file: file,
                                     isSelectedForRemoval: viewModel.isSelectedForRemoval(file),
                                     reviewState: viewModel.reviewState(for: file, in: group),
+                                    allowsRemoval: group.allowsRemoval,
                                     toggleRemoval: {
                                         viewModel.toggleRemovalSelection(for: file, in: group)
                                     },

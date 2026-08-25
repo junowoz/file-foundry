@@ -36,7 +36,9 @@ public struct ReportExportService: Sendable {
                     String(file.size),
                     group.sha256,
                     group.verificationLevel.rawValue,
-                    group.recommendedRemovalFileIDs.contains(file.id) ? "remove" : "keep"
+                    group.allowsRemoval
+                        ? (group.recommendedRemovalFileIDs.contains(file.id) ? "remove" : "keep")
+                        : "review"
                 ])
             }
         }
@@ -100,7 +102,9 @@ private struct Report: Encodable {
             self.path = file.path
             self.size = file.size
             self.sha256 = file.sha256
-            self.actionRecommendation = group.recommendedRemovalFileIDs.contains(file.id) ? "remove" : "keep"
+            self.actionRecommendation = group.allowsRemoval
+                ? (group.recommendedRemovalFileIDs.contains(file.id) ? "remove" : "keep")
+                : "review"
         }
     }
 
