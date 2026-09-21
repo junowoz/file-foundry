@@ -35,7 +35,7 @@ final class AppBundleValidatorTests: XCTestCase {
             throw XCTSkip("Set DOPPEL_APP_BUNDLE_UNDER_TEST to validate a signed app bundle.")
         }
 
-        try AppBundleValidator.validateDoppelAppBundle(at: URL(fileURLWithPath: path))
+        try AppBundleValidator.validateFileFoundryAppBundle(at: URL(fileURLWithPath: path))
     }
 
     private func machOHeader(cpuType: UInt32) -> Data {

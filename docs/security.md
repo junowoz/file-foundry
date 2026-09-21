@@ -1,17 +1,19 @@
 # Security Notes
 
-Doppel's safety model is intentionally conservative.
+File Foundry's safety model is intentionally conservative.
 
 ## Network Boundary
 
-The app has no telemetry, analytics, tracking, or background network calls. The only in-app network path is the manual updater, which contacts official GitHub Releases after the user clicks **Check for Updates**. `scripts/check_secure_entitlements.sh` verifies that Doppel remains sandboxed, keeps user-selected file access, allows client networking for updates, and never requests a network server entitlement.
+The app has no telemetry, analytics, tracking, or background network calls. The only in-app network path is the manual updater, which contacts official GitHub Releases after the user clicks **Check for Updates**.
 
-Update downloads use `URLSessionConfiguration.ephemeral`, are staged in a temporary `DoppelUpdate-*` directory, and are removed after installation. Doppel also removes stale `DoppelUpdate-*` and `DoppelPrevious-*` directories on launch.
+File Foundry is intentionally distributed outside App Sandbox because sandboxed macOS apps cannot launch an arbitrary FFmpeg executable installed by the user. The signed app requests no entitlements. Explicit file and folder pickers, validation in each module, direct `Process` invocation without a shell, and FFmpeg's `-n` option enforce the product boundary. `scripts/check_secure_entitlements.sh` verifies that the release does not accidentally acquire sandbox, server-network, or other signing entitlements.
 
-Before installing an update, Doppel validates:
+Update downloads use `URLSessionConfiguration.ephemeral`, are staged in a temporary `FileFoundryUpdate-*` directory, and are removed after installation. File Foundry also removes stale update directories on launch.
+
+Before installing an update, File Foundry validates:
 
 1. The app ZIP matches the published SHA-256 checksum.
-2. The bundle identifier is `com.junowoz.doppel`.
+2. The bundle identifier is `com.junowoz.filefoundry`.
 3. The bundle version matches the release tag.
 4. The executable is Apple Silicon only based on native Mach-O inspection.
 5. The app bundle signature passes native Security.framework validation.

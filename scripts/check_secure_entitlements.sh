@@ -2,25 +2,15 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-ENTITLEMENTS="$ROOT_DIR/DoppelApp/Resources/Doppel.entitlements"
+ENTITLEMENTS="$ROOT_DIR/DoppelApp/Resources/FileFoundry.entitlements"
 
 if [[ ! -f "$ENTITLEMENTS" ]]; then
   echo "Missing entitlements file: $ENTITLEMENTS" >&2
   exit 1
 fi
 
-if ! /usr/libexec/PlistBuddy -c "Print :com.apple.security.app-sandbox" "$ENTITLEMENTS" | grep -q "true"; then
-  echo "Doppel must remain sandboxed." >&2
-  exit 1
-fi
-
-if ! /usr/libexec/PlistBuddy -c "Print :com.apple.security.files.user-selected.read-write" "$ENTITLEMENTS" | grep -q "true"; then
-  echo "Doppel must keep user-selected file access only." >&2
-  exit 1
-fi
-
-if ! /usr/libexec/PlistBuddy -c "Print :com.apple.security.network.client" "$ENTITLEMENTS" | grep -q "true"; then
-  echo "Doppel needs client networking for manual GitHub Releases updates." >&2
+if /usr/libexec/PlistBuddy -c "Print :com.apple.security.app-sandbox" "$ENTITLEMENTS" >/dev/null 2>&1; then
+  echo "File Foundry must remain outside App Sandbox so it can launch the user's local FFmpeg executable." >&2
   exit 1
 fi
 
@@ -29,4 +19,9 @@ if /usr/libexec/PlistBuddy -c "Print :com.apple.security.network.server" "$ENTIT
   exit 1
 fi
 
-echo "Entitlements are limited to sandbox, user-selected files, and update client networking."
+if [[ "$(/usr/libexec/PlistBuddy -c "Print" "$ENTITLEMENTS")" != "Dict {"$'\n'"}" ]]; then
+  echo "File Foundry should not request signing entitlements." >&2
+  exit 1
+fi
+
+echo "File Foundry requests no signing entitlements; filesystem scope is enforced by explicit pickers and application logic."

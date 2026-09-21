@@ -1,9 +1,11 @@
 # Privacy Policy
 
-Doppel is local-first software.
+File Foundry is private, local-first software.
 
 - No account is required.
 - No internet connection is required for scanning or cleanup.
+- The app is distributed outside App Sandbox so it can launch a locally installed FFmpeg executable.
+- The interface and application services operate on files and folders the user explicitly selects.
 - No analytics are collected.
 - No telemetry is collected.
 - No tracking is performed.

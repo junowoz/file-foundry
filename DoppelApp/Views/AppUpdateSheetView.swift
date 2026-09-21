@@ -90,13 +90,13 @@ struct AppUpdateSheetView: View {
         case .checking:
             "Checking for Updates"
         case .upToDate:
-            "Doppel Is Up to Date"
+            "File Foundry Is Up to Date"
         case .updateAvailable(let release):
-            "Doppel \(release.version) Is Available"
+            "File Foundry \(release.version) Is Available"
         case .downloading(let release):
-            "Downloading Doppel \(release.version)"
+            "Downloading File Foundry \(release.version)"
         case .readyToInstall(let stagedUpdate):
-            "Ready to Install Doppel \(stagedUpdate.release.version)"
+            "Ready to Install File Foundry \(stagedUpdate.release.version)"
         case .installing:
             "Installing Update"
         case .failed:
@@ -107,19 +107,19 @@ struct AppUpdateSheetView: View {
     private var message: String {
         switch viewModel.status {
         case .idle:
-            "Doppel can check the official GitHub Releases feed and install a verified update."
+            "File Foundry can check the official GitHub Releases feed and install a verified update."
         case .checking:
             "Contacting GitHub Releases with an ephemeral network session."
         case .upToDate(let version):
-            "You are running Doppel \(version)."
+            "You are running File Foundry \(version)."
         case .updateAvailable:
-            "The download will be checksum-verified before Doppel restarts and replaces itself."
+            "The download will be checksum-verified before File Foundry restarts and replaces itself."
         case .downloading:
             "Downloading the signed app archive and its published SHA-256 checksum."
         case .readyToInstall:
-            "Doppel will quit, replace the current app bundle, remove temporary files, and reopen."
+            "File Foundry will quit, replace the current app bundle, remove temporary files, and reopen."
         case .installing:
-            "Doppel will close in a moment and reopen after the update finishes."
+            "File Foundry will close in a moment and reopen after the update finishes."
         case .failed(let message):
             message
         }
@@ -173,4 +173,3 @@ struct AppUpdateSheetView: View {
         }
     }
 }
-

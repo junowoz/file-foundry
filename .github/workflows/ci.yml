@@ -22,13 +22,13 @@ jobs:
         run: swift test 2>&1 | tee swift-test.log
 
       - name: xcodebuild clean
-        run: xcodebuild -scheme Doppel -destination 'platform=macOS,arch=arm64' clean 2>&1 | tee xcode-clean.log
+        run: swift package clean
 
       - name: xcodebuild build
-        run: xcodebuild -scheme Doppel -destination 'platform=macOS,arch=arm64' build 2>&1 | tee xcode-build.log
+        run: swift build --arch arm64 --product FileFoundry 2>&1 | tee swift-build.log
 
       - name: xcodebuild test
-        run: xcodebuild -scheme Doppel -destination 'platform=macOS,arch=arm64' test 2>&1 | tee xcode-test.log
+        run: swift test 2>&1 | tee swift-test.log
 
       - name: Upload logs
         if: failure()

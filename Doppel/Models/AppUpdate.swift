@@ -96,7 +96,7 @@ public enum AppUpdateError: Error, LocalizedError {
         case .invalidAppBundle(let reason):
             "The downloaded app bundle is invalid: \(reason)."
         case .unsupportedBundleLocation:
-            "Doppel must be running from a .app bundle to update itself."
+            "File Foundry must be running from a .app bundle to update itself."
         case .missingUpdaterHelper:
             "The updater helper is missing from the app bundle."
         case .commandFailed(let command, let output):
@@ -106,4 +106,3 @@ public enum AppUpdateError: Error, LocalizedError {
         }
     }
 }
-

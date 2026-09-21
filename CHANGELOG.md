@@ -1,6 +1,20 @@
 # Changelog
 
-All notable changes to Doppel will be documented in this file.
+All notable changes to File Foundry will be documented in this file.
+
+## [1.0.0] - 2026-09-21
+
+### Added
+
+- Combined Duplicate Finder and Media Organizer in one native macOS app.
+- Added a local FFmpeg converter with nine video, audio, and image presets.
+- Added a persistent module sidebar and shared settings for both existing tools.
+
+### Changed
+
+- Renamed the app, bundle, updater, release assets, and repository references to File Foundry.
+- Moved the published identity from Doppel to `com.junowoz.filefoundry`.
+- Preserved the previous duplicate-finder preferences through a one-time fallback migration.
 
 ## [0.2.2] - 2026-08-25
 
@@ -78,7 +92,7 @@ All notable changes to Doppel will be documented in this file.
 ### Added
 
 - Built-in **Check for Updates** panel for standalone app updates from GitHub Releases.
-- `DoppelUpdater` helper app for replacing the current app bundle after Doppel quits.
+- `FileFoundryUpdater` helper app for replacing the current app bundle after File Foundry quits.
 - Update validation for ZIP SHA-256 checksums, bundle identifier, release version, Apple Silicon architecture, and code signature.
 - Ephemeral update downloads with temporary staging cleanup.
 

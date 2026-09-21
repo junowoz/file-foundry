@@ -34,10 +34,10 @@ public final class AppUpdateService: @unchecked Sendable {
         }
 
         guard
-            let package = response.assets.first(where: { $0.name == "Doppel.app.zip" }),
-            let checksum = response.assets.first(where: { $0.name == "Doppel.app.zip.sha256" })
+            let package = response.assets.first(where: { $0.name == "FileFoundry.app.zip" }),
+            let checksum = response.assets.first(where: { $0.name == "FileFoundry.app.zip.sha256" })
         else {
-            throw AppUpdateError.missingReleaseAsset("Doppel.app.zip and Doppel.app.zip.sha256")
+            throw AppUpdateError.missingReleaseAsset("FileFoundry.app.zip and FileFoundry.app.zip.sha256")
         }
         guard
             response.htmlURL.host == "github.com",
@@ -78,7 +78,7 @@ public final class AppUpdateService: @unchecked Sendable {
     public func latestRelease() async throws -> AppRelease {
         var request = URLRequest(url: latestReleaseAPIURL)
         request.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData
-        request.setValue("Doppel/\(AppMetadata.version)", forHTTPHeaderField: "User-Agent")
+        request.setValue("FileFoundry/\(AppMetadata.version)", forHTTPHeaderField: "User-Agent")
         request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
 
         let (data, response) = try await session.data(for: request)
@@ -94,9 +94,9 @@ public final class AppUpdateService: @unchecked Sendable {
         try cleanupTemporaryFiles()
 
         let stagingDirectory = fileManager.temporaryDirectory
-            .appendingPathComponent("DoppelUpdate-\(UUID().uuidString)", isDirectory: true)
+            .appendingPathComponent("FileFoundryUpdate-\(UUID().uuidString)", isDirectory: true)
         let extractedDirectory = stagingDirectory.appendingPathComponent("Extracted", isDirectory: true)
-        let packageURL = stagingDirectory.appendingPathComponent("Doppel.app.zip")
+        let packageURL = stagingDirectory.appendingPathComponent("FileFoundry.app.zip")
 
         do {
             try fileManager.createDirectory(at: stagingDirectory, withIntermediateDirectories: true)
@@ -140,7 +140,7 @@ public final class AppUpdateService: @unchecked Sendable {
             options: [.skipsHiddenFiles]
         )
 
-        for url in contents where isDoppelTemporaryDirectory(url) {
+        for url in contents where isFileFoundryTemporaryDirectory(url) {
             try? fileManager.removeItem(at: url)
         }
     }
@@ -148,7 +148,7 @@ public final class AppUpdateService: @unchecked Sendable {
     private func download(_ url: URL, to destinationURL: URL) async throws {
         var request = URLRequest(url: url)
         request.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData
-        request.setValue("Doppel/\(AppMetadata.version)", forHTTPHeaderField: "User-Agent")
+        request.setValue("FileFoundry/\(AppMetadata.version)", forHTTPHeaderField: "User-Agent")
 
         let (downloadedURL, response) = try await session.download(for: request)
         try validateHTTPResponse(response)
@@ -162,7 +162,7 @@ public final class AppUpdateService: @unchecked Sendable {
     private func data(from url: URL) async throws -> Data {
         var request = URLRequest(url: url)
         request.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData
-        request.setValue("Doppel/\(AppMetadata.version)", forHTTPHeaderField: "User-Agent")
+        request.setValue("FileFoundry/\(AppMetadata.version)", forHTTPHeaderField: "User-Agent")
 
         let (data, response) = try await session.data(for: request)
         try validateHTTPResponse(response)
@@ -184,7 +184,7 @@ public final class AppUpdateService: @unchecked Sendable {
     }
 
     private func extractedAppBundle(in directory: URL) throws -> URL {
-        let directURL = directory.appendingPathComponent("Doppel.app", isDirectory: true)
+        let directURL = directory.appendingPathComponent("FileFoundry.app", isDirectory: true)
         if fileManager.fileExists(atPath: directURL.path) {
             return directURL
         }
@@ -194,15 +194,15 @@ public final class AppUpdateService: @unchecked Sendable {
             includingPropertiesForKeys: nil,
             options: [.skipsHiddenFiles]
         )
-        if let appURL = contents.first(where: { $0.lastPathComponent == "Doppel.app" && $0.pathExtension == "app" }) {
+        if let appURL = contents.first(where: { $0.lastPathComponent == "FileFoundry.app" && $0.pathExtension == "app" }) {
             return appURL
         }
 
-        throw AppUpdateError.invalidAppBundle("Doppel.app was not found in the archive.")
+        throw AppUpdateError.invalidAppBundle("FileFoundry.app was not found in the archive.")
     }
 
     private func validateAppBundle(_ appBundleURL: URL, expectedVersion: String) throws {
-        try AppBundleValidator.validateDoppelAppBundle(
+        try AppBundleValidator.validateFileFoundryAppBundle(
             at: appBundleURL,
             expectedVersion: expectedVersion,
             fileManager: fileManager
@@ -232,9 +232,9 @@ public final class AppUpdateService: @unchecked Sendable {
         return output.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    private func isDoppelTemporaryDirectory(_ url: URL) -> Bool {
+    private func isFileFoundryTemporaryDirectory(_ url: URL) -> Bool {
         let name = url.lastPathComponent
-        return name.hasPrefix("DoppelUpdate-") || name.hasPrefix("DoppelPrevious-")
+        return name.hasPrefix("FileFoundryUpdate-") || name.hasPrefix("FileFoundryPrevious-")
     }
 }
 

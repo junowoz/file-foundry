@@ -2,7 +2,12 @@ import Foundation
 import Security
 
 public enum AppBundleValidator {
-    public static func validateDoppelAppBundle(
+    @available(*, deprecated, renamed: "validateFileFoundryAppBundle")
+    public static func validateDoppelAppBundle(at appBundleURL: URL, expectedVersion: String? = nil, fileManager: FileManager = .default) throws {
+        try validateFileFoundryAppBundle(at: appBundleURL, expectedVersion: expectedVersion, fileManager: fileManager)
+    }
+
+    public static func validateFileFoundryAppBundle(
         at appBundleURL: URL,
         expectedVersion: String? = nil,
         fileManager: FileManager = .default
@@ -14,7 +19,7 @@ public enum AppBundleValidator {
             throw AppUpdateError.invalidAppBundle("The bundle metadata could not be read.")
         }
         guard bundle.bundleIdentifier == AppMetadata.bundleIdentifier else {
-            throw AppUpdateError.invalidAppBundle("The bundle identifier does not match Doppel.")
+            throw AppUpdateError.invalidAppBundle("The bundle identifier does not match File Foundry.")
         }
         if let expectedVersion {
             guard let version = bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String,
@@ -23,7 +28,7 @@ public enum AppBundleValidator {
             }
         }
 
-        let executableURL = appBundleURL.appendingPathComponent("Contents/MacOS/Doppel")
+        let executableURL = appBundleURL.appendingPathComponent("Contents/MacOS/FileFoundry")
         guard fileManager.fileExists(atPath: executableURL.path) else {
             throw AppUpdateError.invalidAppBundle("The app executable is missing.")
         }

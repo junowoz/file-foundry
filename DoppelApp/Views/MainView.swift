@@ -2,6 +2,53 @@ import AppKit
 import DoppelCore
 import SwiftUI
 
+private enum FoundryModule: String, CaseIterable, Identifiable {
+    case duplicates, organizer, converter
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .duplicates: "Duplicate Finder"
+        case .organizer: "Media Organizer"
+        case .converter: "Converter"
+        }
+    }
+    var symbol: String {
+        switch self {
+        case .duplicates: "square.stack.3d.up"
+        case .organizer: "photo.on.rectangle.angled"
+        case .converter: "arrow.triangle.2.circlepath"
+        }
+    }
+}
+
+struct FileFoundryRootView: View {
+    let mediaStore: AppStore
+    @State private var module: FoundryModule = .duplicates
+
+    var body: some View {
+        NavigationSplitView {
+            List(FoundryModule.allCases, selection: $module) { item in
+                Label(item.title, systemImage: item.symbol).tag(item)
+            }
+            .navigationTitle("File Foundry")
+            .listStyle(.sidebar)
+            .safeAreaInset(edge: .bottom) {
+                Text("Private, local-first tools")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.bottom, 10)
+            }
+        } detail: {
+            switch module {
+            case .duplicates: MainView()
+            case .organizer: ContentView(store: mediaStore)
+            case .converter: ConverterView()
+            }
+        }
+        .navigationSplitViewStyle(.balanced)
+    }
+}
+
 struct MainView: View {
     @StateObject private var viewModel = MainViewModel()
     @StateObject private var updateViewModel = AppUpdateViewModel()
@@ -72,7 +119,7 @@ struct MainView: View {
                 } label: {
                     Label("Check for Updates", systemImage: "arrow.down.circle")
                 }
-                .help("Check GitHub Releases and install a verified Doppel update.")
+                .help("Check GitHub Releases and install a verified File Foundry update.")
 
                 Button {
                     NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
@@ -94,7 +141,7 @@ struct MainView: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Doppel never deletes files permanently. Review before moving files.")
+            Text("Duplicate Finder never deletes files permanently. Review before moving files.")
         }
         .sheet(isPresented: $showUpdater) {
             AppUpdateSheetView(viewModel: updateViewModel)
@@ -107,7 +154,7 @@ struct MainView: View {
     private func chooseJSONExport() {
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.json]
-        panel.nameFieldStringValue = "doppel-audit-report.json"
+        panel.nameFieldStringValue = "file-foundry-audit-report.json"
         panel.canCreateDirectories = true
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {

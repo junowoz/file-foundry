@@ -1,6 +1,8 @@
 # Architecture
 
-Doppel is organized around a testable core and a native SwiftUI shell.
+File Foundry is organized around a testable core and a native SwiftUI shell with Duplicate Finder, Media Organizer, and Converter modules.
+
+The direct-distribution bundle is not App Sandboxed because Converter launches the user's local FFmpeg executable. All three modules still begin from explicit user selections and apply their own path and operation checks.
 
 ## Core Target
 
@@ -16,7 +18,7 @@ Doppel is organized around a testable core and a native SwiftUI shell.
 
 ## Updater Target
 
-`DoppelUpdater` is a small helper app embedded in `Doppel.app/Contents/Library/Helpers`. It does not perform network requests. The main app downloads and validates the update, then launches the helper so it can wait for Doppel to quit, replace the app bundle, reopen Doppel, and remove temporary update files.
+`FileFoundryUpdater` is a small helper app embedded in `FileFoundry.app/Contents/Library/Helpers`. It does not perform network requests. The main app downloads and validates the update, then launches the helper so it can wait for File Foundry to quit, replace the app bundle, reopen File Foundry, and remove temporary update files.
 
 ## Detection Pipeline
 

@@ -50,7 +50,7 @@ private enum UpdaterError: Error, CustomStringConvertible {
         case .invalidBundle(let reason):
             "Invalid bundle: \(reason)"
         case .timeoutWaitingForApp:
-            "Timed out waiting for Doppel to quit."
+            "Timed out waiting for File Foundry to quit."
         case .commandFailed(let output):
             "Command failed: \(output)"
         }
@@ -65,7 +65,7 @@ private enum DoppelUpdater {
             try run(arguments)
             exit(EXIT_SUCCESS)
         } catch {
-            fputs("DoppelUpdater: \(error)\n", stderr)
+            fputs("FileFoundryUpdater: \(error)\n", stderr)
             exit(EXIT_FAILURE)
         }
     }
@@ -96,7 +96,7 @@ private enum DoppelUpdater {
         }
 
         let backupURL = fileManager.temporaryDirectory
-            .appendingPathComponent("DoppelPrevious-\(UUID().uuidString).app", isDirectory: true)
+            .appendingPathComponent("FileFoundryPrevious-\(UUID().uuidString).app", isDirectory: true)
 
         if fileManager.fileExists(atPath: backupURL.path) {
             try fileManager.removeItem(at: backupURL)
@@ -122,7 +122,7 @@ private enum DoppelUpdater {
     }
 
     private static func validateAppBundle(_ appURL: URL) throws {
-        try AppBundleValidator.validateDoppelAppBundle(at: appURL)
+        try AppBundleValidator.validateFileFoundryAppBundle(at: appURL)
     }
 
     private static func openApp(_ appURL: URL) throws {

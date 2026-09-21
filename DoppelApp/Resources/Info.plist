@@ -5,17 +5,17 @@
     <key>CFBundleDevelopmentRegion</key>
     <string>$(DEVELOPMENT_LANGUAGE)</string>
     <key>CFBundleExecutable</key>
-    <string>Doppel</string>
+    <string>FileFoundry</string>
     <key>CFBundleIdentifier</key>
-    <string>com.junowoz.doppel</string>
+    <string>com.junowoz.filefoundry</string>
     <key>CFBundleName</key>
-    <string>Doppel</string>
+    <string>File Foundry</string>
     <key>CFBundleIconFile</key>
-    <string>Doppel</string>
+    <string>FileFoundry</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>0.2.2</string>
+    <string>1.0.0</string>
     <key>CFBundleVersion</key>
     <string>1</string>
     <key>LSMinimumSystemVersion</key>

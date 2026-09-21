@@ -27,10 +27,10 @@ let bodyAttributes: [NSAttributedString.Key: Any] = [
     .foregroundColor: muted
 ]
 
-let title = "Install Doppel" as NSString
+let title = "Install File Foundry" as NSString
 title.draw(at: NSPoint(x: 226, y: 328), withAttributes: titleAttributes)
 
-let subtitle = "Drag Doppel to Applications" as NSString
+let subtitle = "Drag File Foundry to Applications" as NSString
 subtitle.draw(at: NSPoint(x: 226, y: 304), withAttributes: bodyAttributes)
 
 let arrow = NSBezierPath()

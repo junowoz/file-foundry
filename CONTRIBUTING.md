@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping make Doppel safer and more useful.
+Thanks for helping make File Foundry safer and more useful.
 
 ## Development
 

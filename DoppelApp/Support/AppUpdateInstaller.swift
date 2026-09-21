@@ -10,7 +10,7 @@ enum AppUpdateInstaller {
         }
 
         let helperURL = currentBundleURL
-            .appendingPathComponent("Contents/Library/Helpers/DoppelUpdater.app", isDirectory: true)
+            .appendingPathComponent("Contents/Library/Helpers/FileFoundryUpdater.app", isDirectory: true)
         guard FileManager.default.fileExists(atPath: helperURL.path) else {
             throw AppUpdateError.missingUpdaterHelper(helperURL.path)
         }

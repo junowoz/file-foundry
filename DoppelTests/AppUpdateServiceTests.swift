@@ -14,22 +14,22 @@ final class AppUpdateServiceTests: XCTestCase {
             """
             {
               "tag_name": "v0.1.2",
-              "html_url": "https://github.com/junowoz/doppel/releases/tag/v0.1.2",
+              "html_url": "https://github.com/junowoz/file-foundry/releases/tag/v1.0.0",
               "draft": false,
               "prerelease": false,
               "body": "Release notes",
               "assets": [
                 {
-                  "name": "Doppel.dmg",
-                  "browser_download_url": "https://github.com/junowoz/doppel/releases/download/v0.1.2/Doppel.dmg"
+                  "name": "FileFoundry.dmg",
+                  "browser_download_url": "https://github.com/junowoz/file-foundry/releases/download/v1.0.0/FileFoundry.dmg"
                 },
                 {
-                  "name": "Doppel.app.zip",
-                  "browser_download_url": "https://github.com/junowoz/doppel/releases/download/v0.1.2/Doppel.app.zip"
+                  "name": "FileFoundry.app.zip",
+                  "browser_download_url": "https://github.com/junowoz/file-foundry/releases/download/v1.0.0/FileFoundry.app.zip"
                 },
                 {
-                  "name": "Doppel.app.zip.sha256",
-                  "browser_download_url": "https://github.com/junowoz/doppel/releases/download/v0.1.2/Doppel.app.zip.sha256"
+                  "name": "FileFoundry.app.zip.sha256",
+                  "browser_download_url": "https://github.com/junowoz/file-foundry/releases/download/v1.0.0/FileFoundry.app.zip.sha256"
                 }
               ]
             }
@@ -39,15 +39,15 @@ final class AppUpdateServiceTests: XCTestCase {
         let release = try AppUpdateService.release(from: json)
 
         XCTAssertEqual(release.version, "0.1.2")
-        XCTAssertEqual(release.packageURL.lastPathComponent, "Doppel.app.zip")
-        XCTAssertEqual(release.checksumURL.lastPathComponent, "Doppel.app.zip.sha256")
+        XCTAssertEqual(release.packageURL.lastPathComponent, "FileFoundry.app.zip")
+        XCTAssertEqual(release.checksumURL.lastPathComponent, "FileFoundry.app.zip.sha256")
     }
 
     func testChecksumValidationRejectsMismatchedPackage() throws {
         try withTemporaryDirectory { directory in
-            let packageURL = try writeFile(directory, "Doppel.app.zip", makeData("package"))
+            let packageURL = try writeFile(directory, "FileFoundry.app.zip", makeData("package"))
             let checksumData = Data(
-                "0000000000000000000000000000000000000000000000000000000000000000  Doppel.app.zip\n".utf8
+                "0000000000000000000000000000000000000000000000000000000000000000  FileFoundry.app.zip\n".utf8
             )
             let service = AppUpdateService()
 
@@ -62,17 +62,17 @@ final class AppUpdateServiceTests: XCTestCase {
             """
             {
               "tag_name": "v0.1.2",
-              "html_url": "https://github.com/junowoz/doppel/releases/tag/v0.1.2",
+              "html_url": "https://github.com/junowoz/file-foundry/releases/tag/v1.0.0",
               "draft": false,
               "prerelease": false,
               "assets": [
                 {
-                  "name": "Doppel.app.zip",
-                  "browser_download_url": "https://example.com/Doppel.app.zip"
+                  "name": "FileFoundry.app.zip",
+                  "browser_download_url": "https://example.com/FileFoundry.app.zip"
                 },
                 {
-                  "name": "Doppel.app.zip.sha256",
-                  "browser_download_url": "https://github.com/junowoz/doppel/releases/download/v0.1.2/Doppel.app.zip.sha256"
+                  "name": "FileFoundry.app.zip.sha256",
+                  "browser_download_url": "https://github.com/junowoz/file-foundry/releases/download/v1.0.0/FileFoundry.app.zip.sha256"
                 }
               ]
             }

@@ -3,14 +3,14 @@
 import PackageDescription
 
 let package = Package(
-    name: "Doppel",
+    name: "FileFoundry",
     platforms: [
         .macOS(.v14)
     ],
     products: [
         .library(name: "DoppelCore", targets: ["DoppelCore"]),
-        .executable(name: "Doppel", targets: ["Doppel"]),
-        .executable(name: "DoppelUpdater", targets: ["DoppelUpdater"])
+        .executable(name: "FileFoundry", targets: ["FileFoundry"]),
+        .executable(name: "FileFoundryUpdater", targets: ["FileFoundryUpdater"])
     ],
     targets: [
         .target(
@@ -18,7 +18,7 @@ let package = Package(
             path: "Doppel"
         ),
         .executableTarget(
-            name: "Doppel",
+            name: "FileFoundry",
             dependencies: ["DoppelCore"],
             path: "DoppelApp",
             exclude: [
@@ -26,7 +26,7 @@ let package = Package(
             ]
         ),
         .executableTarget(
-            name: "DoppelUpdater",
+            name: "FileFoundryUpdater",
             dependencies: ["DoppelCore"],
             path: "DoppelUpdater"
         ),
@@ -34,6 +34,11 @@ let package = Package(
             name: "DoppelTests",
             dependencies: ["DoppelCore"],
             path: "DoppelTests"
+        ),
+        .testTarget(
+            name: "MediaSortTests",
+            dependencies: ["FileFoundry"],
+            path: "MediaSortTests"
         )
     ]
 )

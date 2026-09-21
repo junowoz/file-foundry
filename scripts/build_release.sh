@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-APP_NAME="Doppel"
-UPDATER_NAME="DoppelUpdater"
-BUNDLE_ID="com.junowoz.doppel"
-UPDATER_BUNDLE_ID="com.junowoz.doppel.updater"
-VERSION="${VERSION:-0.2.2}"
+APP_NAME="FileFoundry"
+UPDATER_NAME="FileFoundryUpdater"
+BUNDLE_ID="com.junowoz.filefoundry"
+UPDATER_BUNDLE_ID="com.junowoz.filefoundry.updater"
+VERSION="${VERSION:-1.0.0}"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DIST_DIR="$ROOT_DIR/dist"
 APP_BUNDLE="$DIST_DIR/$APP_NAME.app"
@@ -20,8 +20,8 @@ UPDATER_CONTENTS="$UPDATER_BUNDLE/Contents"
 UPDATER_MACOS="$UPDATER_CONTENTS/MacOS"
 UPDATER_BINARY="$UPDATER_MACOS/$UPDATER_NAME"
 UPDATER_INFO_PLIST="$UPDATER_CONTENTS/Info.plist"
-ICON_FILE="$ROOT_DIR/DoppelApp/Resources/Doppel.icns"
-ENTITLEMENTS="$ROOT_DIR/DoppelApp/Resources/Doppel.entitlements"
+ICON_FILE="$ROOT_DIR/DoppelApp/Resources/FileFoundry.icns"
+ENTITLEMENTS="$ROOT_DIR/DoppelApp/Resources/FileFoundry.entitlements"
 CODESIGN_IDENTITY="${CODESIGN_IDENTITY:--}"
 
 cd "$ROOT_DIR"
@@ -37,7 +37,7 @@ rm -rf "$APP_BUNDLE"
 mkdir -p "$APP_MACOS" "$APP_RESOURCES" "$UPDATER_MACOS"
 cp "$BUILD_BINARY" "$APP_BINARY"
 cp "$UPDATER_BUILD_BINARY" "$UPDATER_BINARY"
-cp "$ICON_FILE" "$APP_RESOURCES/Doppel.icns"
+cp "$ICON_FILE" "$APP_RESOURCES/FileFoundry.icns"
 chmod +x "$APP_BINARY"
 chmod +x "$UPDATER_BINARY"
 
@@ -53,7 +53,7 @@ cat >"$INFO_PLIST" <<PLIST
   <key>CFBundleName</key>
   <string>$APP_NAME</string>
   <key>CFBundleIconFile</key>
-  <string>Doppel</string>
+  <string>FileFoundry</string>
   <key>CFBundlePackageType</key>
   <string>APPL</string>
   <key>CFBundleShortVersionString</key>
@@ -84,7 +84,7 @@ cat >"$UPDATER_INFO_PLIST" <<PLIST
   <key>CFBundleIdentifier</key>
   <string>$UPDATER_BUNDLE_ID</string>
   <key>CFBundleName</key>
-  <string>Doppel Updater</string>
+  <string>File Foundry Updater</string>
   <key>CFBundlePackageType</key>
   <string>APPL</string>
   <key>CFBundleShortVersionString</key>

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-APP_NAME="Doppel"
+APP_NAME="FileFoundry"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DIST_DIR="$ROOT_DIR/dist"
 APP_BUNDLE="$DIST_DIR/$APP_NAME.app"
@@ -34,7 +34,7 @@ swift "$ROOT_DIR/scripts/create_dmg_background.swift" "$BACKGROUND_PNG"
 cat > "$APPDMG_CONFIG" <<JSON
 {
   "title": "$APP_NAME",
-  "icon": "$ROOT_DIR/DoppelApp/Resources/Doppel.icns",
+  "icon": "$ROOT_DIR/DoppelApp/Resources/FileFoundry.icns",
   "background": "$BACKGROUND_PNG",
   "icon-size": 112,
   "window": {
