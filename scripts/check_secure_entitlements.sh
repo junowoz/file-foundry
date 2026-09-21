@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-ENTITLEMENTS="$ROOT_DIR/DoppelApp/Resources/FileFoundry.entitlements"
+ENTITLEMENTS="$ROOT_DIR/FileFoundryApp/Resources/FileFoundry.entitlements"
 
 if [[ ! -f "$ENTITLEMENTS" ]]; then
   echo "Missing entitlements file: $ENTITLEMENTS" >&2

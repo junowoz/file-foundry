@@ -34,7 +34,7 @@ swift "$ROOT_DIR/scripts/create_dmg_background.swift" "$BACKGROUND_PNG"
 cat > "$APPDMG_CONFIG" <<JSON
 {
   "title": "$APP_NAME",
-  "icon": "$ROOT_DIR/DoppelApp/Resources/FileFoundry.icns",
+  "icon": "$ROOT_DIR/FileFoundryApp/Resources/FileFoundry.icns",
   "background": "$BACKGROUND_PNG",
   "icon-size": 112,
   "window": {

@@ -13,7 +13,7 @@ All notable changes to File Foundry will be documented in this file.
 ### Changed
 
 - Renamed the app, bundle, updater, release assets, and repository references to File Foundry.
-- Moved the published identity from Doppel to `com.junowoz.filefoundry`.
+- Moved the published identity from the previous standalone duplicate finder to `com.junowoz.filefoundry`.
 - Preserved the previous duplicate-finder preferences through a one-time fallback migration.
 
 ## [0.2.2] - 2026-08-25

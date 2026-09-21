@@ -1,0 +1,100 @@
+import XCTest
+@testable import FileFoundryCore
+
+final class FileActionServiceTests: XCTestCase {
+    func testValidationFailsWhenRemovalFileChanged() throws {
+        try withTemporaryDirectory { directory in
+            let keep = try ScannedFile(url: writeFile(directory, "keep.txt", makeData("same")))
+            let removeURL = try writeFile(directory, "remove.txt", makeData("same"))
+            let remove = try ScannedFile(url: removeURL)
+            let group = DuplicateGroup(files: [keep, remove], sha256: try HashService().sha256(for: keep.url), verificationLevel: .byteByByteConfirmed)
+            try makeData("changed").write(to: removeURL)
+
+            XCTAssertThrowsError(
+                try FileActionService().validateMovePlan(
+                    group: group,
+                    keepFileID: keep.id,
+                    removalFileIDs: [remove.id],
+                    compareMode: .paranoid
+                )
+            )
+        }
+    }
+
+    func testValidationFailsWhenKeepFileIsMissing() throws {
+        try withTemporaryDirectory { directory in
+            let keepURL = try writeFile(directory, "keep.txt", makeData("same"))
+            let keep = try ScannedFile(url: keepURL)
+            let remove = try ScannedFile(url: writeFile(directory, "remove.txt", makeData("same")))
+            let group = DuplicateGroup(files: [keep, remove], sha256: try HashService().sha256(for: keep.url), verificationLevel: .byteByByteConfirmed)
+            try FileManager.default.removeItem(at: keepURL)
+
+            XCTAssertThrowsError(
+                try FileActionService().validateMovePlan(
+                    group: group,
+                    keepFileID: keep.id,
+                    removalFileIDs: [remove.id],
+                    compareMode: .safe
+                )
+            )
+        }
+    }
+
+    func testSafeModeRepeatsByteComparisonBeforeMoving() throws {
+        try withTemporaryDirectory { directory in
+            let keep = try ScannedFile(url: writeFile(directory, "keep.txt", makeData("same")))
+            let removeURL = try writeFile(directory, "remove.txt", makeData("same"))
+            let remove = try ScannedFile(url: removeURL)
+            let group = DuplicateGroup(files: [keep, remove], sha256: try HashService().sha256(for: keep.url), verificationLevel: .byteByByteConfirmed)
+
+            try makeData("diff").write(to: removeURL)
+
+            XCTAssertThrowsError(
+                try FileActionService().validateMovePlan(
+                    group: group,
+                    keepFileID: keep.id,
+                    removalFileIDs: [remove.id],
+                    compareMode: .safe
+                )
+            )
+        }
+    }
+
+    func testValidationRejectsKeepFileSelectedForRemoval() throws {
+        try withTemporaryDirectory { directory in
+            let keep = try ScannedFile(url: writeFile(directory, "keep.txt", makeData("same")))
+            let remove = try ScannedFile(url: writeFile(directory, "remove.txt", makeData("same")))
+            let group = DuplicateGroup(files: [keep, remove], sha256: try HashService().sha256(for: keep.url), verificationLevel: .byteByByteConfirmed)
+
+            XCTAssertThrowsError(
+                try FileActionService().validateMovePlan(
+                    group: group,
+                    keepFileID: keep.id,
+                    removalFileIDs: [keep.id],
+                    compareMode: .safe
+                )
+            ) { error in
+                XCTAssertEqual(error as? FileActionError, .keepFileSelectedForRemoval)
+            }
+        }
+    }
+
+    func testValidationRejectsMetadataMatch() throws {
+        try withTemporaryDirectory { directory in
+            let keep = try ScannedFile(url: writeFile(directory, "track.wav", makeData("first")))
+            let remove = try ScannedFile(url: writeFile(directory, "track.mp3", makeData("second")))
+            let group = DuplicateGroup(files: [keep, remove], sha256: "", verificationLevel: .metadataMatch)
+
+            XCTAssertThrowsError(
+                try FileActionService().validateMovePlan(
+                    group: group,
+                    keepFileID: keep.id,
+                    removalFileIDs: [remove.id],
+                    compareMode: .safe
+                )
+            ) { error in
+                XCTAssertEqual(error as? FileActionError, .unverifiedMetadataMatch)
+            }
+        }
+    }
+}

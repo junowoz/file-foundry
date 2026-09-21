@@ -1,4 +1,4 @@
-# Media Sort — Safety Model
+# File Foundry — Media Organizer Safety Model
 
 ## Ameaças e boundaries
 

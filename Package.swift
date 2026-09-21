@@ -8,37 +8,37 @@ let package = Package(
         .macOS(.v14)
     ],
     products: [
-        .library(name: "DoppelCore", targets: ["DoppelCore"]),
+        .library(name: "FileFoundryCore", targets: ["FileFoundryCore"]),
         .executable(name: "FileFoundry", targets: ["FileFoundry"]),
         .executable(name: "FileFoundryUpdater", targets: ["FileFoundryUpdater"])
     ],
     targets: [
         .target(
-            name: "DoppelCore",
-            path: "Doppel"
+            name: "FileFoundryCore",
+            path: "FileFoundryCore"
         ),
         .executableTarget(
             name: "FileFoundry",
-            dependencies: ["DoppelCore"],
-            path: "DoppelApp",
+            dependencies: ["FileFoundryCore"],
+            path: "FileFoundryApp",
             exclude: [
                 "Resources"
             ]
         ),
         .executableTarget(
             name: "FileFoundryUpdater",
-            dependencies: ["DoppelCore"],
-            path: "DoppelUpdater"
+            dependencies: ["FileFoundryCore"],
+            path: "FileFoundryUpdater"
         ),
         .testTarget(
-            name: "DoppelTests",
-            dependencies: ["DoppelCore"],
-            path: "DoppelTests"
+            name: "FileFoundryCoreTests",
+            dependencies: ["FileFoundryCore"],
+            path: "FileFoundryCoreTests"
         ),
         .testTarget(
-            name: "MediaSortTests",
+            name: "MediaOrganizerTests",
             dependencies: ["FileFoundry"],
-            path: "MediaSortTests"
+            path: "MediaOrganizerTests"
         )
     ]
 )
