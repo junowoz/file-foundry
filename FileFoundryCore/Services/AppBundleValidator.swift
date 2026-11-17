@@ -55,6 +55,30 @@ public enum AppBundleValidator {
             let message = retainedError.map { CFErrorCopyDescription($0) as String? } ?? nil
             throw AppUpdateError.invalidAppBundle(message ?? "The app signature is invalid.")
         }
+
+        // Pin the signer: a validly signed bundle from a different team must not replace the running app.
+        // Unsigned or ad-hoc development builds have no Team ID, so there is nothing to pin.
+        if let runningTeam = runningTeamIdentifier() {
+            guard teamIdentifier(of: staticCode) == runningTeam else {
+                throw AppUpdateError.invalidAppBundle("The update is signed by a different developer than the installed app.")
+            }
+        }
+    }
+
+    private static func runningTeamIdentifier() -> String? {
+        var selfCode: SecCode?
+        guard SecCodeCopySelf(SecCSFlags(), &selfCode) == errSecSuccess, let selfCode else { return nil }
+        var staticCode: SecStaticCode?
+        guard SecCodeCopyStaticCode(selfCode, SecCSFlags(), &staticCode) == errSecSuccess, let staticCode else { return nil }
+        return teamIdentifier(of: staticCode)
+    }
+
+    private static func teamIdentifier(of code: SecStaticCode) -> String? {
+        var info: CFDictionary?
+        let flags = SecCSFlags(rawValue: kSecCSSigningInformation)
+        guard SecCodeCopySigningInformation(code, flags, &info) == errSecSuccess,
+              let dictionary = info as? [String: Any] else { return nil }
+        return dictionary[kSecCodeInfoTeamIdentifier as String] as? String
     }
 
     private static func machOArchitectures(in data: Data) throws -> Set<UInt32> {

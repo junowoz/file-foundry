@@ -2,6 +2,26 @@
 
 All notable changes to File Foundry will be documented in this file.
 
+## [1.1.0] - 2026-11-17
+
+### Added
+
+- Compressor: shrink any video, audio or image to a target size (two-pass H.264/HEVC with automatic resolution step-down) or a quality preset; other files and folders become a lossless ZIP.
+- Shared drop zone, file card, progress and result panels for Compressor and Converter, with determinate FFmpeg progress and cancellation.
+
+### Changed
+
+- New simple vector app icon (`FileFoundryApp/Resources/Brand/FileFoundryIcon.svg`).
+- Redesigned Converter, Duplicate Finder and Media Organizer: adaptive layouts down to 760x520, collapsible preview inspector, grouped toolbar, stepper for the organizer flow.
+- Heavy work (trash validation, previews, planning, probing) moved off the main thread; thumbnails are cached.
+
+### Security
+
+- Duplicate Finder re-checks file type, size and modification time before moving to Trash.
+- The scanner no longer follows symlinks out of the chosen folders.
+- Updates require HTTPS and a code signature from the same Team ID as the running app.
+- Compressor and Converter never use a shell, refuse to overwrite or write onto the input, and keep temporary files in a private directory removed on finish or cancel.
+
 ## [1.0.0] - 2026-09-21
 
 ### Added

@@ -7,31 +7,34 @@ struct DuplicateGroupRowView: View {
     var selectedSavings: Int64
 
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 8) {
             Image(systemName: group.containsSameUnderlyingFile ? "link" : "doc.on.doc")
-                .foregroundStyle(group.containsSameUnderlyingFile ? .gray : .blue)
+                .foregroundStyle(group.containsSameUnderlyingFile ? Color.secondary : Color.blue)
                 .frame(width: 24)
 
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text("\(group.files.count) matching files")
                     .font(.headline)
                 Text(summary)
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .monospacedDigit()
             }
 
-            Spacer()
+            Spacer(minLength: 8)
 
             Label(group.verificationLevel.label, systemImage: group.allowsRemoval ? "checkmark.shield" : "magnifyingglass")
                 .font(.caption)
-                .foregroundStyle(group.allowsRemoval ? .blue : .secondary)
+                .foregroundStyle(group.allowsRemoval ? Color.blue : Color.secondary)
+                .labelStyle(.titleAndIcon)
+                .lineLimit(1)
         }
-        .padding(.vertical, 4)
     }
 
     private var summary: String {
         if group.allowsRemoval {
-            return "\(selectedRemovalCount) removable · \(AppFormatters.fileSize(group.size)) each · saves \(AppFormatters.fileSize(selectedSavings))"
+            return "\(selectedRemovalCount) to remove · \(AppFormatters.fileSize(group.size)) each · saves \(AppFormatters.fileSize(selectedSavings))"
         }
         return "Review only · verify with Exact matching before cleanup"
     }

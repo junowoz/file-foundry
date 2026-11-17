@@ -72,7 +72,11 @@ public final class MainViewModel: ObservableObject {
 
     public var selectedFile: ScannedFile? {
         if let selectedFileID {
-            return duplicateGroups.flatMap(\.files).first { $0.id == selectedFileID }
+            if let hit = selectedGroup?.files.first(where: { $0.id == selectedFileID }) { return hit }
+            for group in duplicateGroups {
+                if let hit = group.files.first(where: { $0.id == selectedFileID }) { return hit }
+            }
+            return nil
         }
         return selectedGroup?.files.first
     }
@@ -350,21 +354,29 @@ public final class MainViewModel: ObservableObject {
         var movedIDs: Set<ScannedFile.ID> = []
 
         do {
-            for group in result.duplicateGroups {
-                let groupIDs = Set(group.files.map(\.id))
-                let removalIDs = selectedIDs.intersection(groupIDs)
-                guard !removalIDs.isEmpty else { continue }
-                guard let keepID = group.files.first(where: { !removalIDs.contains($0.id) })?.id else { continue }
+            // Re-hashing and byte comparison can read gigabytes: keep it off the main actor.
+            let outcome = try await Task.detached(priority: .userInitiated) { () throws -> ([ActionLog], Set<ScannedFile.ID>) in
+                var logs: [ActionLog] = []
+                var movedIDs: Set<ScannedFile.ID> = []
+                for group in result.duplicateGroups {
+                    let groupIDs = Set(group.files.map(\.id))
+                    let removalIDs = selectedIDs.intersection(groupIDs)
+                    guard !removalIDs.isEmpty else { continue }
+                    guard let keepID = group.files.first(where: { !removalIDs.contains($0.id) })?.id else { continue }
 
-                let log = try actionService.moveSelectedToTrash(
-                    group: group,
-                    keepFileID: keepID,
-                    removalFileIDs: removalIDs,
-                    compareMode: options.compareMode
-                )
-                logs.append(log)
-                movedIDs.formUnion(removalIDs)
-            }
+                    let log = try actionService.moveSelectedToTrash(
+                        group: group,
+                        keepFileID: keepID,
+                        removalFileIDs: removalIDs,
+                        compareMode: options.compareMode
+                    )
+                    logs.append(log)
+                    movedIDs.formUnion(removalIDs)
+                }
+                return (logs, movedIDs)
+            }.value
+            logs = outcome.0
+            movedIDs = outcome.1
 
             actionLogs.append(contentsOf: logs)
             selectedRemovalFileIDs.subtract(movedIDs)

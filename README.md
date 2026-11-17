@@ -6,6 +6,7 @@ File Foundry is a native Apple Silicon macOS app with private, local-first tools
 
 - **Duplicate Finder** safely finds exact duplicates, verifies them byte-for-byte, and moves selected copies to Trash without permanently deleting files.
 - **Media Organizer** scans selected media folders, plans a dated library, and creates verified copies while preserving originals.
+- **Compressor** shrinks a video, audio or image file to a size you choose (for example 25 MB) with two-pass FFmpeg encoding, or to a quality preset. Other files become a lossless ZIP.
 - **Converter** converts video, audio, and image files through a local FFmpeg executable with explicit presets, command preview, cancellation, and no silent overwrite.
 
 ## Download
@@ -23,7 +24,7 @@ File Foundry has no login, analytics, telemetry, tracking, or external SDKs. It 
 
 Duplicate Finder never permanently deletes files. Media Organizer only creates verified copies and validates source/destination scope. Converter invokes FFmpeg directly with `Process`, uses `-n` to refuse overwrites, and never runs a shell command.
 
-File Foundry is distributed outside App Sandbox because macOS otherwise blocks launching the user's locally installed FFmpeg executable. The app requests no signing entitlements and its own interface and services remain limited to paths the user explicitly chooses. Install FFmpeg with `brew install ffmpeg` before using Converter.
+File Foundry is distributed outside App Sandbox because macOS otherwise blocks launching the user's locally installed FFmpeg executable. The app requests no signing entitlements and its own interface and services remain limited to paths the user explicitly chooses. Install FFmpeg with `brew install ffmpeg` before using Compressor or Converter.
 
 The Media Organizer threat model and residual symlink/staging risks are documented in [Media Organizer Safety](docs/media-organizer-safety.md).
 

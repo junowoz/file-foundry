@@ -12,7 +12,7 @@ struct SidebarView: View {
             FolderListView(
                 folders: viewModel.folders,
                 selectedFolder: $selectedFolder,
-                addFolder: chooseFolder,
+                addFolder: { FolderPicker.choose(into: viewModel, selection: $selectedFolder) },
                 removeFolder: { viewModel.removeSelectedFolder(selectedFolder) },
                 clearFolders: viewModel.clearFolders
             )
@@ -34,7 +34,8 @@ struct SidebarView: View {
             }
             .buttonStyle(.plain)
             .padding(.horizontal, 16)
-            .padding(.vertical, 11)
+            .padding(.vertical, 8)
+            .frame(minHeight: 32)
             .help("Choose which folders win when exact copies are found.")
 
             Divider()
@@ -43,12 +44,18 @@ struct SidebarView: View {
                 .padding(.horizontal, 12)
                 .padding(.vertical, 10)
         }
+        .dropDestination(for: URL.self) { urls, _ in
+            FolderPicker.drop(urls, into: viewModel)
+        }
         .sheet(isPresented: $showKeepRules) {
             KeepRulesView(viewModel: viewModel)
         }
     }
+}
 
-    private func chooseFolder() {
+enum FolderPicker {
+    @MainActor
+    static func choose(into viewModel: MainViewModel, selection: Binding<URL?>? = nil) {
         let panel = NSOpenPanel()
         panel.canChooseFiles = false
         panel.canChooseDirectories = true
@@ -60,6 +67,14 @@ struct SidebarView: View {
         for url in panel.urls {
             viewModel.addFolder(url)
         }
-        selectedFolder = panel.urls.first
+        selection?.wrappedValue = panel.urls.first
+    }
+
+    /// Keeps only directories from a drop; files are ignored.
+    @MainActor
+    static func drop(_ urls: [URL], into viewModel: MainViewModel) -> Bool {
+        let folders = urls.filter { (try? $0.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true }
+        for url in folders { viewModel.addFolder(url) }
+        return !folders.isEmpty
     }
 }

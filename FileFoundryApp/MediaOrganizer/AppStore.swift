@@ -115,7 +115,10 @@ final class AppStore {
                 let result = try await scanner.scan(sources: sources, filesystemFallback: filesystemFallback)
                 summary = result
                 acceptsIncompleteScan = false
-                plan = try planner.makePlan(summary: result, sources: sources, template: template)
+                let planner = planner, sources = sources, template = template
+                plan = try await Task.detached(priority: .userInitiated) {
+                    try planner.makePlan(summary: result, sources: sources, template: template)
+                }.value
                 step = .configure
                 statusMessage = "Análise concluída: \(result.records.count) itens contabilizados."
             } catch is CancellationError {

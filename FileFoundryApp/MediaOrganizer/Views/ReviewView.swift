@@ -5,7 +5,7 @@ struct ReviewView: View {
     @State private var query = ""
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack { Text("Revise antes de copiar").font(.title).fontWeight(.semibold); Spacer(); Text("\(filtered.count) itens") }
+            HStack { Text("Revise antes de copiar").font(.title).fontWeight(.semibold); Spacer(); Text("\(filtered.count) itens").foregroundStyle(.secondary).monospacedDigit() }
             Table(filtered) {
                 TableColumn("Nome") { Text($0.record.filename).lineLimit(1) }
                 TableColumn("Tipo") { Text($0.record.kind.rawValue) }.width(80)
@@ -15,13 +15,13 @@ struct ReviewView: View {
                 TableColumn("Status") { Text(statusText($0.status)) }.width(130)
             }
             .searchable(text: $query, prompt: "Buscar arquivos")
-            HStack {
+            HStack(spacing: 8) {
                 Button("Voltar") { store.step = .configure }
                 Spacer()
-                Label("Nada foi escrito no destino até aqui.", systemImage: "eye") .foregroundStyle(.secondary)
+                Label("Nada foi escrito no destino até aqui.", systemImage: "eye").foregroundStyle(.secondary).font(.callout).lineLimit(1)
                 Button("Criar cópia organizada") { store.export() }.buttonStyle(.borderedProminent)
             }
-        }.padding()
+        }.padding(16)
     }
 
     private var filtered: [PlannedItem] {

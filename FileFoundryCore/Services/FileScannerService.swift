@@ -72,6 +72,14 @@ public final class FileScannerService: @unchecked Sendable {
         if options.ignoreSymlinks && isSymlink {
             return
         }
+        if isSymlink && !isRoot {
+            // Never follow a link out of the chosen folder, and never recurse through linked folders.
+            let root = sourceFolder.standardizedFileURL.resolvingSymlinksInPath().path
+            let target = url.resolvingSymlinksInPath().path
+            guard target == root || target.hasPrefix(root.hasSuffix("/") ? root : root + "/") else { return }
+            var targetIsDirectory: ObjCBool = false
+            if fileManager.fileExists(atPath: target, isDirectory: &targetIsDirectory), targetIsDirectory.boolValue { return }
+        }
 
         if isDirectory {
             if !isRoot && options.ignorePackages && isPackage {

@@ -10,6 +10,8 @@ public enum FileActionError: Error, LocalizedError, Equatable {
     case unverifiedMetadataMatch
     case unknownFileID
     case keepFileSelectedForRemoval
+    case fileModified(String)
+    case notRegularFile(String)
 
     public var errorDescription: String? {
         switch self {
@@ -22,6 +24,8 @@ public enum FileActionError: Error, LocalizedError, Equatable {
         case .unverifiedMetadataMatch: "Metadata matches must be verified with Exact matching before moving files to Trash."
         case .unknownFileID: "Selected file was not found in the duplicate group."
         case .keepFileSelectedForRemoval: "The file to keep cannot also be selected for Trash."
+        case .fileModified(let path): "File was modified since it was scanned: \(path)"
+        case .notRegularFile(let path): "Not a regular file (folder or symlink target changed): \(path)"
         }
     }
 }
@@ -64,6 +68,7 @@ public struct FileActionService {
             throw FileActionError.keepFileMissing(keepFile.path)
         }
 
+        try verifySameFile(keepFile)
         let currentKeepSize = try hashService.fileSize(for: keepFile.url)
         guard currentKeepSize == group.size else {
             throw FileActionError.sizeChanged(keepFile.path)
@@ -80,6 +85,7 @@ public struct FileActionService {
             guard fileManager.fileExists(atPath: removalFile.path) else {
                 throw FileActionError.removalFileMissing(removalFile.path)
             }
+            try verifySameFile(removalFile)
             guard try hashService.fileSize(for: removalFile.url) == group.size else {
                 throw FileActionError.sizeChanged(removalFile.path)
             }
@@ -124,4 +130,28 @@ public struct FileActionService {
 
         return ActionLog(actions: actions, summary: "Moved \(actions.count) file(s) to Trash.")
     }
+
+    /// Re-checks that the file on disk is still the one that was scanned (kind, size, mtime)
+    /// before any hashing or Trash action, so a swapped or edited file is never trashed.
+    private func verifySameFile(_ file: ScannedFile) throws {
+        let values = try file.url.resourceValues(forKeys: [
+            .isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey, .contentModificationDateKey
+        ])
+        if file.isSymlink != (values.isSymbolicLink ?? false) {
+            throw FileActionError.notRegularFile(file.path)
+        }
+        if !file.isSymlink, values.isRegularFile != true {
+            throw FileActionError.notRegularFile(file.path)
+        }
+        if let size = values.fileSize, Int64(size) != file.size {
+            throw FileActionError.sizeChanged(file.path)
+        }
+        if let scanned = file.modificationDate, let current = values.contentModificationDate,
+           abs(scanned.timeIntervalSince(current)) > 0.001 {
+            throw FileActionError.fileModified(file.path)
+        }
+    }
 }
+
+// FileManager.default is thread-safe for these calls; the service holds no mutable state.
+extension FileActionService: @unchecked Sendable {}

@@ -19,7 +19,7 @@ struct FileFoundryApp: App {
     var body: some Scene {
         WindowGroup {
             FileFoundryRootView(mediaStore: mediaStore)
-                .frame(minWidth: 1_100, minHeight: 680)
+                .frame(minWidth: 760, minHeight: 520)
         }
 
         Settings {

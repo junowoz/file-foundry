@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2E3138"/>
+      <stop offset="1" stop-color="#111215"/>
+    </linearGradient>
+    <linearGradient id="sheet" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#E4E7EC"/>
+    </linearGradient>
+    <linearGradient id="ember" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FFC24A"/>
+      <stop offset="1" stop-color="#FF5A1F"/>
+    </linearGradient>
+  </defs>
+  <!-- macOS icon grid: 824pt body, 100pt inset -->
+  <rect x="100" y="100" width="824" height="824" rx="186" fill="url(#bg)"/>
+  <rect x="101" y="101" width="822" height="822" rx="185" fill="none" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="2"/>
+  <g transform="translate(-18 0)">
+  <!-- document -->
+  <path d="M352 256 H574 L692 374 V728 Q692 768 652 768 H352 Q312 768 312 728 V296 Q312 256 352 256 Z" fill="url(#sheet)"/>
+  <path d="M574 256 V334 Q574 374 614 374 H692 Z" fill="#B9BFC9"/>
+  <!-- text lines -->
+  <rect x="372" y="452" width="200" height="28" rx="14" fill="#2E3138" fill-opacity="0.22"/>
+  <rect x="372" y="516" width="160" height="28" rx="14" fill="#2E3138" fill-opacity="0.22"/>
+  <!-- ember spark, with a cut-out ring in the background colour -->
+  <path d="M682 520 C694 610 724 640 814 652 C724 664 694 694 682 784 C670 694 640 664 550 652 C640 640 670 610 682 520 Z"
+        fill="url(#ember)" stroke="#16171B" stroke-width="22" stroke-linejoin="round" paint-order="stroke"/>
+  </g>
+</svg>

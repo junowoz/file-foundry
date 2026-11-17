@@ -40,6 +40,9 @@ public final class AppUpdateService: @unchecked Sendable {
             throw AppUpdateError.missingReleaseAsset("FileFoundry.app.zip and FileFoundry.app.zip.sha256")
         }
         guard
+            response.htmlURL.scheme == "https",
+            package.browserDownloadURL.scheme == "https",
+            checksum.browserDownloadURL.scheme == "https",
             response.htmlURL.host == "github.com",
             package.browserDownloadURL.host == "github.com",
             checksum.browserDownloadURL.host == "github.com"

@@ -10,7 +10,24 @@ struct ConfigureView: View {
     ]
 
     var body: some View {
-        HSplitView {
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .top, spacing: 0) {
+                ScrollView { structurePane.frame(maxWidth: .infinity, alignment: .leading) }
+                    .frame(minWidth: 280, idealWidth: 340, maxWidth: 380)
+                Divider()
+                destinationPane.frame(minWidth: 400)
+            }
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    structurePane
+                    Divider()
+                    destinationPane.frame(minHeight: 360)
+                }
+            }
+        }
+    }
+
+    private var structurePane: some View {
             VStack(alignment: .leading, spacing: 14) {
                 Text("Estrutura").font(.title2).fontWeight(.semibold)
                 ForEach(presets, id: \.1) { preset in
@@ -31,10 +48,11 @@ struct ConfigureView: View {
                 Divider()
                 Toggle("Usar data do arquivo como último recurso", isOn: Bindable(store).filesystemFallback)
                 Text("Desligado por padrão: datas do Finder podem representar uma cópia ou download.").font(.caption).foregroundStyle(.secondary)
-                Spacer()
             }
-            .padding().frame(minWidth: 330, idealWidth: 380)
+            .padding(16)
+    }
 
+    private var destinationPane: some View {
             VStack(alignment: .leading, spacing: 14) {
                 Text("Destino e resumo").font(.title2).fontWeight(.semibold)
                 HStack {
@@ -46,7 +64,7 @@ struct ConfigureView: View {
                 }
                 Divider()
                 if let summary = store.summary {
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 125))], spacing: 12) {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 120), spacing: 8)], spacing: 8) {
                         MetricCard(title: "Total", value: summary.records.count)
                         MetricCard(title: "Fotos", value: summary.exportableRecords.filter { $0.kind == .photo }.count)
                         MetricCard(title: "Vídeos", value: summary.exportableRecords.filter { $0.kind == .video }.count)
@@ -64,17 +82,17 @@ struct ConfigureView: View {
                 }
                 Text("Preview").font(.headline)
                 List(store.plan?.items.prefix(80).map { $0 } ?? []) { item in
-                    Label(item.destinationRelativePath, systemImage: icon(item.status)).lineLimit(1)
+                    Label(item.destinationRelativePath, systemImage: icon(item.status)).lineLimit(1).truncationMode(.middle)
                 }
+                .frame(minHeight: 120)
                 HStack {
                     Label("Somente cópia • SHA-256 • Sem sobrescrita • 100% local", systemImage: "checkmark.shield")
-                        .font(.caption).foregroundStyle(.secondary)
-                    Spacer()
+                        .font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                    Spacer(minLength: 8)
                     Button("Revisar plano") { store.review() }.buttonStyle(.borderedProminent).disabled(store.destinationParent == nil || store.plan == nil)
                 }
             }
-            .padding().frame(minWidth: 520)
-        }
+            .padding(16)
     }
 
     private func icon(_ status: PlannedStatus) -> String {
@@ -84,5 +102,5 @@ struct ConfigureView: View {
 
 private struct MetricCard: View {
     let title: String; let value: Int
-    var body: some View { VStack(alignment: .leading) { Text(value.formatted()).font(.title2).fontWeight(.semibold); Text(title).font(.caption).foregroundStyle(.secondary) }.frame(maxWidth: .infinity, alignment: .leading).padding(12).background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 10)) }
+    var body: some View { VStack(alignment: .leading) { Text(value.formatted()).font(.title2).fontWeight(.semibold).monospacedDigit(); Text(title).font(.caption).foregroundStyle(.secondary) }.frame(maxWidth: .infinity, alignment: .leading).padding(8).background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 8)) }
 }

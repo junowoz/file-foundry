@@ -3,68 +3,115 @@ import SwiftUI
 
 struct DuplicateGroupsView: View {
     @ObservedObject var viewModel: MainViewModel
+    var addFolders: () -> Void
+    var startScan: () -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var isDropTargeted = false
+
+    private var isScanning: Bool {
+        viewModel.scanState == .indexing || viewModel.scanState == .paused
+    }
 
     var body: some View {
         Group {
-            if viewModel.scanState == .indexing {
-                ScanProgressView(state: viewModel.scanState, message: viewModel.statusMessage)
-            } else if viewModel.duplicateGroups.isEmpty {
-                EmptyStateView(
-                    title: "No duplicate groups",
-                    message: "Add folders, choose a match mode, and review results before moving anything to Trash."
+            if isScanning {
+                ScanProgressView(
+                    state: viewModel.scanState,
+                    message: viewModel.statusMessage,
+                    currentFile: viewModel.currentFileDescription,
+                    onCancel: { viewModel.cancelScan() }
                 )
+            } else if viewModel.duplicateGroups.isEmpty {
+                emptyState
             } else {
-                ScrollView {
-                    LazyVStack(spacing: 0) {
-                        ForEach(viewModel.duplicateGroups) { group in
-                            VStack(spacing: 0) {
-                                Button {
-                                    viewModel.select(group: group)
-                                } label: {
-                                    DuplicateGroupRowView(
-                                        group: group,
-                                        selectedRemovalCount: viewModel.selectedRemovalCount(in: group),
-                                        selectedSavings: viewModel.selectedSavings(in: group)
-                                    )
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 6)
-                                    .contentShape(Rectangle())
-                                }
-                                .buttonStyle(.plain)
-                                .background(
-                                    viewModel.selectedGroupID == group.id
-                                        ? Color.accentColor.opacity(0.08)
-                                        : Color(nsColor: .controlBackgroundColor)
-                                )
+                groupList
+                    .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.96)))
+            }
+        }
+        .overlay {
+            if isDropTargeted {
+                RoundedRectangle(cornerRadius: 12)
+                    .strokeBorder(Color.accentColor, style: StrokeStyle(lineWidth: 2, dash: [8, 6]))
+                    .background(Color.accentColor.opacity(0.06), in: RoundedRectangle(cornerRadius: 12))
+                    .padding(8)
+                    .allowsHitTesting(false)
+            }
+        }
+        .dropDestination(for: URL.self) { urls, _ in
+            FolderPicker.drop(urls, into: viewModel)
+        } isTargeted: { isDropTargeted = $0 }
+    }
 
-                                ForEach(Array(group.files.enumerated()), id: \.element.id) { index, file in
-                                    if index > 0 {
-                                        Divider()
-                                            .padding(.leading, 52)
-                                    }
+    @ViewBuilder
+    private var emptyState: some View {
+        if viewModel.folders.isEmpty {
+            EmptyStateView(
+                title: "Find duplicate files",
+                message: "Add or drop a folder to look for exact copies. Nothing is changed until you review and confirm.",
+                symbol: "square.stack.3d.up",
+                actionTitle: "Add Folder",
+                action: addFolders
+            )
+        } else if viewModel.scanState == .finished {
+            EmptyStateView(
+                title: "No duplicates found",
+                message: viewModel.statusMessage,
+                symbol: "checkmark.seal"
+            )
+        } else {
+            EmptyStateView(
+                title: "Ready to scan",
+                message: "\(viewModel.folders.count) folder\(viewModel.folders.count == 1 ? "" : "s") selected. Adjust options in the sidebar, then scan.",
+                symbol: "magnifyingglass",
+                actionTitle: viewModel.canStartScan ? "Scan" : nil,
+                action: viewModel.canStartScan ? startScan : nil
+            )
+        }
+    }
 
-                                    DuplicateFileRowView(
-                                        file: file,
-                                        reviewState: viewModel.reviewState(for: file, in: group),
-                                        allowsRemoval: group.allowsRemoval,
-                                        isSelected: viewModel.selectedFileID == file.id,
-                                        keepFile: {
-                                            viewModel.markFileToKeep(file, in: group)
-                                        },
-                                        selectFile: {
-                                            viewModel.select(file: file, in: group)
-                                        }
-                                    )
-                                }
-
-                                Divider()
-                                    .padding(.vertical, 8)
-                            }
-                            .id(group.id)
+    private var groupList: some View {
+        ScrollView {
+            LazyVStack(spacing: 0, pinnedViews: []) {
+                ForEach(viewModel.duplicateGroups) { group in
+                    VStack(spacing: 0) {
+                        Button {
+                            viewModel.select(group: group)
+                        } label: {
+                            DuplicateGroupRowView(
+                                group: group,
+                                selectedRemovalCount: viewModel.selectedRemovalCount(in: group),
+                                selectedSavings: viewModel.selectedSavings(in: group)
+                            )
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(Rectangle())
                         }
+                        .buttonStyle(.plain)
+                        .background(
+                            viewModel.selectedGroupID == group.id
+                                ? Color.accentColor.opacity(0.10)
+                                : Color(nsColor: .controlBackgroundColor)
+                        )
+
+                        ForEach(Array(group.files.enumerated()), id: \.element.id) { index, file in
+                            if index > 0 {
+                                Divider().padding(.leading, 56)
+                            }
+                            DuplicateFileRowView(
+                                file: file,
+                                reviewState: viewModel.reviewState(for: file, in: group),
+                                allowsRemoval: group.allowsRemoval,
+                                isSelected: viewModel.selectedFileID == file.id,
+                                keepFile: { viewModel.markFileToKeep(file, in: group) },
+                                selectFile: { viewModel.select(file: file, in: group) }
+                            )
+                        }
+
+                        Divider().padding(.top, 8)
                     }
+                    .id(group.id)
                 }
-                .transition(.opacity.combined(with: .move(edge: .bottom)))
             }
         }
     }

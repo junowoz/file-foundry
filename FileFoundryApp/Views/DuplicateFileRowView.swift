@@ -17,8 +17,10 @@ struct DuplicateFileRowView: View {
                     .foregroundStyle(reviewState == .keep ? .green : .secondary)
             }
             .buttonStyle(.plain)
-            .frame(width: 24, height: 24)
+            .frame(width: 32, height: 32)
+            .contentShape(Rectangle())
             .disabled(!allowsRemoval)
+            .accessibilityLabel(reviewState == .keep ? "Kept copy" : "Keep this copy")
             .help(allowsRemoval ? "Keep this copy and mark the others for Trash" : "Verify with Exact matching before cleanup")
 
             Button(action: selectFile) {
@@ -27,11 +29,12 @@ struct DuplicateFileRowView: View {
                         .foregroundStyle(.secondary)
                         .frame(width: 20)
 
-                    VStack(alignment: .leading, spacing: 3) {
+                    VStack(alignment: .leading, spacing: 2) {
                         HStack(spacing: 8) {
                             Text(file.filename)
                                 .fontWeight(.medium)
                                 .lineLimit(1)
+                                .truncationMode(.middle)
                             badge
                         }
                         Text(file.path)
@@ -41,18 +44,20 @@ struct DuplicateFileRowView: View {
                             .truncationMode(.middle)
                         Text("\(AppFormatters.fileSize(file.size)) · Modified \(AppFormatters.date(file.modificationDate))")
                             .font(.caption2)
-                            .foregroundStyle(.tertiary)
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
                             .lineLimit(1)
                     }
 
                     Spacer(minLength: 0)
                 }
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(isSelected ? Color.accentColor.opacity(0.06) : Color.clear)
+        .background(isSelected ? Color.accentColor.opacity(0.08) : Color.clear)
         .contextMenu {
             if allowsRemoval, reviewState != .keep {
                 Button {
@@ -65,20 +70,18 @@ struct DuplicateFileRowView: View {
     }
 
     private var badge: some View {
-        Group {
-            switch reviewState {
-            case .keep:
-                Text("Keep")
-                    .foregroundStyle(.green)
-            case .remove:
-                Text("Trash")
-                    .foregroundStyle(.red)
-            case .needsReview:
-                Text(allowsRemoval ? "Needs review" : "Candidate")
-                    .foregroundStyle(.orange)
-            }
+        let (text, color): (String, Color) = switch reviewState {
+        case .keep: ("Keep", .green)
+        case .remove: ("Trash", .red)
+        case .needsReview: (allowsRemoval ? "Needs review" : "Candidate", .orange)
         }
-        .font(.caption2.weight(.semibold))
+        return Text(text)
+            .font(.caption2.weight(.semibold))
+            .foregroundStyle(color)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 1)
+            .background(color.opacity(0.14), in: Capsule())
+            .fixedSize()
     }
 
     private var iconName: String {

@@ -3,13 +3,14 @@ import FileFoundryCore
 import SwiftUI
 
 private enum FoundryModule: String, CaseIterable, Identifiable {
-    case duplicates, organizer, converter
+    case duplicates, organizer, converter, compressor
     var id: String { rawValue }
     var title: String {
         switch self {
         case .duplicates: "Duplicate Finder"
         case .organizer: "Media Organizer"
         case .converter: "Converter"
+        case .compressor: "Compressor"
         }
     }
     var symbol: String {
@@ -17,32 +18,44 @@ private enum FoundryModule: String, CaseIterable, Identifiable {
         case .duplicates: "square.stack.3d.up"
         case .organizer: "photo.on.rectangle.angled"
         case .converter: "arrow.triangle.2.circlepath"
+        case .compressor: "arrow.down.right.and.arrow.up.left"
         }
     }
 }
 
 struct FileFoundryRootView: View {
     let mediaStore: AppStore
-    @State private var module: FoundryModule = .duplicates
+    @SceneStorage("selectedModule") private var selectedModule = FoundryModule.duplicates.rawValue
+
+    private var module: Binding<FoundryModule> {
+        Binding(
+            get: { FoundryModule(rawValue: selectedModule) ?? .duplicates },
+            set: { selectedModule = $0.rawValue })
+    }
 
     var body: some View {
         NavigationSplitView {
-            List(FoundryModule.allCases, selection: $module) { item in
+            List(FoundryModule.allCases, selection: module) { item in
                 Label(item.title, systemImage: item.symbol).tag(item)
             }
             .navigationTitle("File Foundry")
             .listStyle(.sidebar)
-            .safeAreaInset(edge: .bottom) {
-                Text("Private, local-first tools")
+            .navigationSplitViewColumnWidth(min: 180, ideal: 200, max: 260)
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                Label("Works on this Mac only", systemImage: "lock.shield")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                    .padding(.bottom, 10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .help("Files are processed locally and never uploaded.")
             }
         } detail: {
-            switch module {
+            switch module.wrappedValue {
             case .duplicates: MainView()
             case .organizer: ContentView(store: mediaStore)
             case .converter: ConverterView()
+            case .compressor: CompressorView()
             }
         }
         .navigationSplitViewStyle(.balanced)
@@ -55,85 +68,96 @@ struct MainView: View {
     @State private var selectedFolder: URL?
     @State private var showTrashConfirmation = false
     @State private var showUpdater = false
+    @State private var showPreview = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private var isScanning: Bool { viewModel.scanState == .indexing || viewModel.scanState == .paused }
 
     var body: some View {
         NavigationSplitView {
             SidebarView(viewModel: viewModel, selectedFolder: $selectedFolder)
-                .navigationSplitViewColumnWidth(min: 260, ideal: 300, max: 360)
-        } content: {
-            DuplicateGroupsView(viewModel: viewModel)
-                .navigationSplitViewColumnWidth(min: 420, ideal: 640)
+                .navigationSplitViewColumnWidth(min: 220, ideal: 280, max: 340)
         } detail: {
-            FilePreviewView(viewModel: viewModel)
-                .navigationSplitViewColumnWidth(min: 300, ideal: 380, max: 520)
+            DuplicateGroupsView(
+                viewModel: viewModel,
+                addFolders: { FolderPicker.choose(into: viewModel, selection: $selectedFolder) },
+                startScan: { viewModel.startScan() }
+            )
+            .frame(minWidth: 320)
+            .inspector(isPresented: $showPreview) {
+                FilePreviewView(viewModel: viewModel)
+                    .inspectorColumnWidth(min: 240, ideal: 340, max: 480)
+            }
         }
         .toolbar {
-            ToolbarItemGroup {
-                Button {
-                    viewModel.startScan()
-                } label: {
-                    Label("Scan", systemImage: "play.fill")
+            ToolbarItemGroup(placement: .primaryAction) {
+                scanControl
+
+                if isScanning {
+                    Button {
+                        viewModel.cancelScan()
+                    } label: {
+                        Label("Cancel Scan", systemImage: "xmark")
+                    }
+                    .help("Cancel the scan")
                 }
-                .disabled(!viewModel.canStartScan)
 
                 Button {
-                    viewModel.pauseScan()
-                } label: {
-                    Label("Pause", systemImage: "pause.fill")
-                }
-                .disabled(viewModel.scanState != .indexing)
-
-                Button {
-                    viewModel.resumeScan()
-                } label: {
-                    Label("Resume", systemImage: "forward.fill")
-                }
-                .disabled(viewModel.scanState != .paused)
-
-                Button {
-                    viewModel.cancelScan()
-                } label: {
-                    Label("Cancel", systemImage: "xmark")
-                }
-                .disabled(viewModel.scanState != .indexing && viewModel.scanState != .paused)
-            }
-
-            ToolbarItemGroup {
-                Button(role: .destructive) {
                     showTrashConfirmation = true
                 } label: {
-                    Label("Move selected to Trash", systemImage: "trash")
+                    Label(trashTitle, systemImage: "trash")
+                        .labelStyle(.titleAndIcon)
                 }
+                .buttonStyle(.borderedProminent)
+                .tint(.red)
                 .disabled(!viewModel.canMoveSelectedFiles)
+                .help("Move the selected copies to the Trash. Nothing is deleted permanently.")
+
+                Menu {
+                    Button {
+                        chooseJSONExport()
+                    } label: {
+                        Label("Export Audit JSON…", systemImage: "square.and.arrow.up")
+                    }
+                    .disabled(viewModel.scanResult == nil)
+
+                    Button {
+                        showUpdater = true
+                    } label: {
+                        Label("Check for Updates…", systemImage: "arrow.down.circle")
+                    }
+
+                    Divider()
+
+                    Button {
+                        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+                    } label: {
+                        Label("Settings…", systemImage: "gearshape")
+                    }
+                } label: {
+                    Label("More", systemImage: "ellipsis.circle")
+                }
+                .help("Export, updates and settings")
 
                 Button {
-                    chooseJSONExport()
+                    showPreview.toggle()
                 } label: {
-                    Label("Export Audit JSON", systemImage: "square.and.arrow.up")
+                    Label("Preview", systemImage: "sidebar.trailing")
                 }
-                .disabled(viewModel.scanResult == nil)
-                .help("Export all found groups, hashes, paths, and current Keep or Trash selections. Full local paths are included.")
-
-                Button {
-                    showUpdater = true
-                } label: {
-                    Label("Check for Updates", systemImage: "arrow.down.circle")
-                }
-                .help("Check GitHub Releases and install a verified File Foundry update.")
-
-                Button {
-                    NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
-                } label: {
-                    Label("Settings", systemImage: "gearshape")
-                }
+                .keyboardShortcut("i", modifiers: [.command, .option])
+                .help("Show or hide the file preview")
             }
         }
-        .safeAreaInset(edge: .bottom) {
+        .safeAreaInset(edge: .bottom, spacing: 0) {
             BottomSummaryBar(viewModel: viewModel)
         }
-        .animation(.snappy(duration: 0.22), value: viewModel.scanState)
-        .animation(.snappy(duration: 0.22), value: viewModel.totalDuplicateGroups)
-        .alert("Selected files will be moved to Trash.", isPresented: $showTrashConfirmation) {
+        .animation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 1), value: viewModel.scanState)
+        .animation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 1), value: viewModel.totalDuplicateGroups)
+        .onChange(of: viewModel.selectedFileID) { _, newValue in
+            // Open the preview the first time something is selected.
+            if newValue != nil, !hasAutoOpenedPreview { showPreview = true; hasAutoOpenedPreview = true }
+        }
+        .alert("Move \(viewModel.totalRemovableFiles) file(s) to Trash?", isPresented: $showTrashConfirmation) {
             Button("Move to Trash", role: .destructive) {
                 Task {
                     await viewModel.moveSelectedToTrash()
@@ -141,13 +165,37 @@ struct MainView: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Duplicate Finder never deletes files permanently. Review before moving files.")
+            Text("About \(AppFormatters.fileSize(viewModel.potentialSavings)) will be reclaimed. Duplicate Finder never deletes files permanently, so you can restore them from the Trash.")
         }
         .sheet(isPresented: $showUpdater) {
             AppUpdateSheetView(viewModel: updateViewModel)
         }
         .onReceive(NotificationCenter.default.publisher(for: .fileFoundryShowUpdater)) { _ in
             showUpdater = true
+        }
+    }
+
+    @State private var hasAutoOpenedPreview = false
+
+    private var trashTitle: String {
+        viewModel.totalRemovableFiles > 0 ? "Move to Trash (\(viewModel.totalRemovableFiles))" : "Move to Trash"
+    }
+
+    /// One stateful control: Scan, Pause or Resume depending on the scan state.
+    @ViewBuilder
+    private var scanControl: some View {
+        switch viewModel.scanState {
+        case .indexing:
+            Button { viewModel.pauseScan() } label: { Label("Pause", systemImage: "pause.fill") }
+                .help("Pause the scan")
+        case .paused:
+            Button { viewModel.resumeScan() } label: { Label("Resume", systemImage: "play.fill") }
+                .help("Resume the scan")
+        default:
+            Button { viewModel.startScan() } label: { Label("Scan", systemImage: "play.fill") }
+                .keyboardShortcut("r", modifiers: .command)
+                .disabled(!viewModel.canStartScan)
+                .help("Scan the selected folders for duplicates")
         }
     }
 

@@ -1,23 +1,25 @@
 import SwiftUI
 
+/// Standard empty state (ContentUnavailableView) with an optional call to action.
 struct EmptyStateView: View {
     var title: String
     var message: String
+    var symbol: String = "doc.on.doc"
+    var actionTitle: String?
+    var action: (() -> Void)?
 
     var body: some View {
-        VStack(spacing: 10) {
-            Image(systemName: "doc.on.doc")
-                .font(.system(size: 42))
-                .foregroundStyle(.secondary)
-            Text(title)
-                .font(.title3)
-                .fontWeight(.semibold)
+        ContentUnavailableView {
+            Label(title, systemImage: symbol)
+        } description: {
             Text(message)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .frame(maxWidth: 320)
+        } actions: {
+            if let actionTitle, let action {
+                Button(actionTitle, systemImage: "plus", action: action)
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding()
     }
 }
