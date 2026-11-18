@@ -11,6 +11,8 @@ struct MainView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
+        // Bar stacked below the split: HSplitView ignores safe-area insets, so content would hide under it.
+        VStack(spacing: 0) {
         HSplitView {
             SidebarView(viewModel: viewModel, selectedFolder: $selectedFolder)
                 .frame(minWidth: RackLayout.paneMin, idealWidth: RackLayout.paneIdeal, maxWidth: RackLayout.paneMax)
@@ -24,6 +26,8 @@ struct MainView: View {
                 FilePreviewView(viewModel: viewModel)
                     .inspectorColumnWidth(min: 240, ideal: 340, max: 480)
             }
+        }
+        BottomSummaryBar(viewModel: viewModel)
         }
         .navigationTitle("Duplicate Finder")
         .toolbar {
@@ -69,9 +73,6 @@ struct MainView: View {
                 }
                 .help("Export and settings")
             }
-        }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            BottomSummaryBar(viewModel: viewModel)
         }
         .animation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 1), value: viewModel.scanState)
         .animation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 1), value: viewModel.totalDuplicateGroups)

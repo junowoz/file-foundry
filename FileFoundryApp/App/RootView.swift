@@ -17,12 +17,12 @@ enum FoundryModule: String, CaseIterable, Identifiable {
     }
     var symbol: String {
         switch self {
-        case .duplicates: "square.stack.3d.up"
-        case .organizer: "photo.on.rectangle.angled"
+        case .duplicates: "square.on.square"
+        case .organizer: "photo.stack"
         case .media: "arrow.triangle.2.circlepath"
         case .transcribe: "waveform"
-        case .secondScreen: "display.2"
-        case .cleaner: "trash.square"
+        case .secondScreen: "rectangle.on.rectangle"
+        case .cleaner: "trash"
         }
     }
     /// Maps modules saved by older versions (Converter, Compressor) to their new home.
@@ -77,6 +77,7 @@ struct FileFoundryRootView: View {
             List(selection: module) {
                 ForEach(orderedModules) { item in
                     Label(item.title, systemImage: item.symbol)
+                        .labelStyle(SidebarRackLabelStyle())
                         .tag(item)
                         .contextMenu {
                             Button("Reset Order") { rackOrder = "" }
@@ -136,6 +137,23 @@ struct FileFoundryRootView: View {
                 }
                 try? await Task.sleep(for: .seconds(60 * 60))
             }
+        }
+    }
+}
+
+
+/// Sidebar row: every symbol sits in the same fixed-width column, so the titles line up
+/// and wide symbols never touch the text.
+private struct SidebarRackLabelStyle: LabelStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(spacing: 8) {
+            configuration.icon
+                .font(.system(size: 14, weight: .regular))
+                .imageScale(.medium)
+                .frame(width: 22, alignment: .center)
+                .foregroundStyle(.tint)
+            configuration.title
+                .lineLimit(1)
         }
     }
 }

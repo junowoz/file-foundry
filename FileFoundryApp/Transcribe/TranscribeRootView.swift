@@ -17,6 +17,9 @@ struct TranscribeRootView: View {
     var body: some View {
         // HSplitView, not NavigationSplitView: this rack already sits in the app's split view, and nesting
         // split views blanks the rack list and duplicates the sidebar column.
+        // The status bar is stacked below the split, not added with safeAreaInset: HSplitView is an AppKit view
+        // that ignores safe-area insets, so the transcript scrolled underneath the bar and its end was hidden.
+        VStack(spacing: 0) {
         HSplitView {
             ScribeSidebarView(store: store, openSettings: { showSettings = true })
                 .frame(minWidth: RackLayout.paneMin, idealWidth: RackLayout.paneIdeal, maxWidth: RackLayout.paneMax)
@@ -29,6 +32,8 @@ struct TranscribeRootView: View {
                     RackEmptyState(symbol: "waveform", title: "Transcribe Audio and Video", message: "Drop recordings here or record a meeting. Transcripts stay on this Mac.", primaryTitle: "Import Files", primarySymbol: "plus", primaryAction: chooseMedia, secondaryTitle: "Record Meeting", secondarySymbol: "record.circle", secondaryAction: beginRecording, footnote: "Audio is sent to AssemblyAI for transcription.")
                 }
             }.frame(minWidth: RackLayout.contentMin, maxWidth: .infinity, maxHeight: .infinity)
+        }
+        statusBar
         }
         .overlay {
             if isDropTarget {
@@ -49,7 +54,6 @@ struct TranscribeRootView: View {
             store.importMedia(urls)
             return true
         } isTargeted: { isDropTarget = $0 }
-        .safeAreaInset(edge: .bottom, spacing: 0) { statusBar }
         .overlay(alignment: .bottom) { toastLayer }
         .navigationTitle("Transcribe")
         .toolbar {
