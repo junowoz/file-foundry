@@ -17,6 +17,7 @@ Both apps update themselves. All releases and checksums are on the [Releases pag
 - **Convert & Compress** takes one or many files. Video, audio and images can be compressed to a size you choose (for example 25 MB, with two-pass FFmpeg encoding) or a quality preset, or converted to another format. Other files and folders become a lossless ZIP.
 - **Transcribe** transcribes audio, video and recorded meetings with AssemblyAI, with search, summaries and TXT/Markdown/PDF/SRT/VTT export. It can import an existing Meeting Scribe library.
 - **Second Screen** turns an Android tablet or phone into an extra display over USB or Wi-Fi, using a virtual display, hardware HEVC/H.264 encoding and an encrypted, paired connection. Install the Android app from the release on the tablet.
+- **App Cleaner** removes apps together with everything they installed (support files, caches, preferences, containers), finds leftovers of apps that are already gone, clears developer caches, lists app updates (Homebrew, built-in updaters, App Store) and shows free space. Everything goes to the Trash and can be put back from the Removed tab. Apple apps are protected.
 
 ## Privacy and safety
 

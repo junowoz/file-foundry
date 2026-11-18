@@ -2,6 +2,18 @@
 
 All notable changes to File Foundry will be documented in this file.
 
+## [1.4.0] - 2026-11-18
+
+### Added
+
+- App Cleaner, a new rack. Pick an app to see everything it installed and move it to the Trash in one step. It also finds leftovers of apps that are no longer installed and clears developer caches. Everything goes to the Trash and can be put back from the Removed tab.
+- App Updates, inside App Cleaner: Homebrew apps, apps with their own updater and App Store apps in one list.
+
+### Fixed
+
+- Convert & Compress: the empty state is back when no files are added.
+- Convert & Compress: the folder header no longer shows wrong information.
+
 ## [1.3.0] - 2026-11-18
 
 ### Added

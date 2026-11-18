@@ -3,7 +3,7 @@ import FileFoundryCore
 import SwiftUI
 
 enum FoundryModule: String, CaseIterable, Identifiable {
-    case duplicates, organizer, media, transcribe, secondScreen
+    case duplicates, organizer, media, transcribe, secondScreen, cleaner
     var id: String { rawValue }
     var title: String {
         switch self {
@@ -12,6 +12,7 @@ enum FoundryModule: String, CaseIterable, Identifiable {
         case .media: "Convert & Compress"
         case .transcribe: "Transcribe"
         case .secondScreen: "Second Screen"
+        case .cleaner: "App Cleaner"
         }
     }
     var symbol: String {
@@ -21,6 +22,7 @@ enum FoundryModule: String, CaseIterable, Identifiable {
         case .media: "arrow.triangle.2.circlepath"
         case .transcribe: "waveform"
         case .secondScreen: "display.2"
+        case .cleaner: "trash.square"
         }
     }
     /// Maps modules saved by older versions (Converter, Compressor) to their new home.
@@ -97,6 +99,7 @@ struct FileFoundryRootView: View {
             case .media: MediaToolView()
             case .transcribe: TranscribeRootView()
             case .secondScreen: SecondScreenView()
+            case .cleaner: AppCleanerRootView()
             }
         }
         .navigationSplitViewStyle(.balanced)
