@@ -2,6 +2,14 @@
 
 All notable changes to File Foundry will be documented in this file.
 
+## [1.4.1] - 2026-11-18
+
+### Fixed
+
+- Transcribe: "Try Again" retries the same item instead of adding a copy named "source". Items already named "source" get their original title back.
+- Transcribe: canceling shows "Processing canceled" instead of a raw "cancelled" error.
+- Transcribe: long uploads retry on their own (up to 3 times) when AssemblyAI or the network has a brief problem, instead of failing with "AssemblyAI is unavailable".
+
 ## [1.4.0] - 2026-11-18
 
 ### Added

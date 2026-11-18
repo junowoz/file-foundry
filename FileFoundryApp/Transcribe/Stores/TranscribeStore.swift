@@ -88,12 +88,28 @@ final class TranscribeStore: ObservableObject {
     }
 
     private func finishLoading() {
+        repairRetryTitles()
         selection = meetings.first?.id
         for meeting in meetings where [.preparing, .uploading].contains(meeting.status) {
             update(meeting.id) { $0.status = .failed; $0.errorMessage = "The app closed before AssemblyAI returned an ID. Try again." }
         }
         isLoaded = true
         resumePendingJobs()
+    }
+
+    /// Older versions retried by re-importing the library copy, so the new item was titled "source".
+    /// Give it the title of the item whose folder it came from.
+    private func repairRetryTitles() {
+        var changed = false
+        for index in meetings.indices where meetings[index].title.lowercased() == "source" {
+            guard let original = meetings[index].originalPath else { continue }
+            let folder = URL(filePath: original).deletingLastPathComponent().standardizedFileURL.path
+            if let owner = meetings.first(where: { URL(filePath: $0.outputDirectory).standardizedFileURL.path == folder && $0.title.lowercased() != "source" }) {
+                meetings[index].title = owner.title
+                changed = true
+            }
+        }
+        if changed { persistMeetings() }
     }
 
     private func resumePendingJobs() {
@@ -400,7 +416,13 @@ final class TranscribeStore: ObservableObject {
                 alertMessage = "The source file is outside the library and wasn't imported by this app, so it won't be sent."
                 return
             }
-            importMedia(source)
+            // Retry the same item in place: same title, folder and original, no duplicate named "source".
+            enqueue { [weak self] in
+                await self?.createAndTranscribe(sourceURL: source, suggestedTitle: meeting.title,
+                                                existingDirectory: URL(filePath: meeting.outputDirectory),
+                                                duration: meeting.durationSeconds > 0 ? meeting.durationSeconds : nil,
+                                                replacing: meeting)
+            }
         }
     }
 
@@ -542,7 +564,8 @@ final class TranscribeStore: ObservableObject {
         showNotice(text)
     }
 
-    private func createAndTranscribe(sourceURL: URL, suggestedTitle: String, existingDirectory: URL? = nil, duration: Double? = nil) async {
+    private func createAndTranscribe(sourceURL: URL, suggestedTitle: String, existingDirectory: URL? = nil, duration: Double? = nil,
+                                     replacing previous: Meeting? = nil) async {
         guard !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             alertMessage = "Add your AssemblyAI API key in Settings before transcribing."
             settingsRequested = true
@@ -569,10 +592,21 @@ final class TranscribeStore: ObservableObject {
             else { measuredDuration = await ScribeMediaProcessor.duration(of: localSource) }
             var meeting = Meeting(title: suggestedTitle, sourceURL: localSource, outputDirectory: directory, durationSeconds: measuredDuration,
                                   originalURL: localSource == sourceURL ? nil : sourceURL, originalFingerprint: fingerprint)
+            var insertAt = 0
+            if let previous {
+                meeting.id = previous.id
+                meeting.createdAt = previous.createdAt
+                meeting.originalPath = previous.originalPath
+                meeting.originalFingerprint = previous.originalFingerprint
+                if let index = meetings.firstIndex(where: { $0.id == previous.id }) {
+                    insertAt = index
+                    meetings.remove(at: index)
+                }
+            }
             createdMeetingID = meeting.id
             activeMeetingID = meeting.id
             meeting.status = .preparing; meeting.progress = 0.05
-            meetings.insert(meeting, at: 0); selection = meeting.id; persistMeetings()
+            meetings.insert(meeting, at: insertAt); selection = meeting.id; persistMeetings()
             isBusy = true; activityText = "Preparing media…"
 
             let preparedURL: URL
@@ -622,6 +656,12 @@ final class TranscribeStore: ObservableObject {
             }
             isBusy = false; activityText = ""
         } catch is CancellationError {
+            isBusy = false; activityText = ""
+        } catch where Task.isCancelled || (error as? URLError)?.code == .cancelled {
+            // URLSession reports a cancelled upload as URLError.cancelled, not CancellationError.
+            if let id = createdMeetingID, let current = meetings.first(where: { $0.id == id }), current.status != .failed {
+                update(id) { $0.markProcessingCancelled() }
+            }
             isBusy = false; activityText = ""
         } catch {
             if let id = createdMeetingID { update(id) { $0.status = .failed; $0.errorMessage = error.localizedDescription } }

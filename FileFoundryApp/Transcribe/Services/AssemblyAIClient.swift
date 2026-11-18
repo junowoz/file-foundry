@@ -20,9 +20,32 @@ struct AssemblyAIClient {
     func upload(fileURL: URL) async throws -> String {
         var request = try request(path: "/v2/upload", method: "POST")
         request.setValue("application/octet-stream", forHTTPHeaderField: "Content-Type")
-        let (data, response) = try await session.upload(for: request, fromFile: fileURL)
-        try validate(response: response, data: data)
-        return try JSONDecoder().decode(UploadResponse.self, from: data).uploadURL
+        return try await Self.withTransientRetries {
+            let (data, response) = try await session.upload(for: request, fromFile: fileURL)
+            try validate(response: response, data: data)
+            return try JSONDecoder().decode(UploadResponse.self, from: data).uploadURL
+        }
+    }
+
+    /// Retries server errors (5xx, 429) and dropped connections up to 3 times, waiting 3, 10 and 30 seconds.
+    /// Long uploads often hit a brief AssemblyAI or network hiccup that a retry clears.
+    static func withTransientRetries<T>(_ operation: () async throws -> T) async throws -> T {
+        let delays: [UInt64] = [3, 10, 30]
+        var attempt = 0
+        while true {
+            do { return try await operation() }
+            catch {
+                guard attempt < delays.count, isTransient(error), !Task.isCancelled else { throw error }
+                try await Task.sleep(nanoseconds: delays[attempt] * 1_000_000_000)
+                attempt += 1
+            }
+        }
+    }
+
+    static func isTransient(_ error: Error) -> Bool {
+        if case ClientError.transient = error { return true }
+        guard let urlError = error as? URLError else { return false }
+        return [.timedOut, .networkConnectionLost, .notConnectedToInternet, .cannotConnectToHost, .dnsLookupFailed].contains(urlError.code)
     }
 
     func submit(audioURL: String, settings: TranscriptionSettings) async throws -> String {
@@ -142,15 +165,21 @@ struct AssemblyAIClient {
     }
 
     private func data(for request: URLRequest) async throws -> Data {
-        let (data, response) = try await session.data(for: request)
-        try validate(response: response, data: data)
-        return data
+        let once: () async throws -> Data = {
+            let (data, response) = try await session.data(for: request)
+            try validate(response: response, data: data)
+            return data
+        }
+        // Only reads are retried: repeating a POST could create (and bill) a second transcript.
+        return request.httpMethod == "GET" ? try await Self.withTransientRetries(once) : try await once()
     }
 
     private func validate(response: URLResponse, data: Data) throws {
         guard let http = response as? HTTPURLResponse else { throw ClientError.invalidResponse }
         guard (200..<300).contains(http.statusCode) else {
-            throw ClientError.api(Self.errorMessage(statusCode: http.statusCode, data: data))
+            let message = Self.errorMessage(statusCode: http.statusCode, data: data)
+            if http.statusCode == 429 || (500...599).contains(http.statusCode) { throw ClientError.transient(message) }
+            throw ClientError.api(message)
         }
     }
 
@@ -176,11 +205,11 @@ struct AssemblyAIClient {
     }
 
     enum ClientError: LocalizedError {
-        case invalidResponse, api(String)
+        case invalidResponse, api(String), transient(String)
         var errorDescription: String? {
             switch self {
             case .invalidResponse: "AssemblyAI sent an invalid response."
-            case .api(let message): message
+            case .api(let message), .transient(let message): message
             }
         }
     }
