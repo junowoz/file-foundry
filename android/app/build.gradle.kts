@@ -10,8 +10,8 @@ android {
         applicationId = "com.junowoz.filefoundry.screen"
         minSdk = 26
         targetSdk = 37
-        versionCode = 10401 // major * 10000 + minor * 100 + patch
-        versionName = "1.4.1"
+        versionCode = 10402 // major * 10000 + minor * 100 + patch
+        versionName = "1.4.2"
     }
 
     buildFeatures {

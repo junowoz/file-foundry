@@ -2,6 +2,22 @@
 
 All notable changes to File Foundry will be documented in this file.
 
+## [1.4.2] - 2026-11-18
+
+### Changed
+
+- New, cleaner logo for File Foundry on Mac and Android: three rack units with the active one lit. The Android app now has its own icon.
+- Sidebar: every rack icon sits in the same column, so the names line up and no longer touch the icons.
+
+### Fixed
+
+- Transcribe and Duplicate Finder: the end of the list or transcript was hidden under the status bar.
+- Transcribe: importing a large video no longer freezes the app while it copies.
+- Transcribe: canceling a resumed transcription or a queue marks every item as canceled instead of leaving it spinning.
+- App Cleaner: removing an app no longer changes the app you selected meanwhile; Leftovers refresh after a removal or Put Back; safety checks no longer stall the window; scans stop when you leave the rack.
+- App Cleaner: clearing caches says the files went to the Trash (space frees up when you empty it).
+- Updates: a running Homebrew upgrade stays visible when you switch tabs and can't be started twice; a stuck upgrade is stopped after its time limit.
+
 ## [1.4.1] - 2026-11-18
 
 ### Fixed
