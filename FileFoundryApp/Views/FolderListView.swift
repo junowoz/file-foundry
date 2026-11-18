@@ -9,8 +9,10 @@ struct FolderListView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            RackSectionHeader(title: "Folders")
+                .padding(.horizontal, RackLayout.l)
+                .padding(.top, RackLayout.m)
             List(selection: $selectedFolder) {
-                Section("Folders") {
                     if folders.isEmpty {
                         Text("Drop folders here or click Add.")
                             .font(.callout)
@@ -23,7 +25,6 @@ struct FolderListView: View {
                             .tag(folder as URL?)
                             .help(folder.path)
                     }
-                }
             }
             .listStyle(.inset)
             .scrollContentBackground(.hidden)

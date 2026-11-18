@@ -8,11 +8,27 @@ struct MediaToolView: View {
     private var spring: Animation? { reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 1) }
 
     var body: some View {
-        ScrollView {
-            content
-                .frame(maxWidth: 920)
-                .padding(24)
-                .frame(maxWidth: .infinity)
+        Group {
+            if model.queue.isEmpty {
+                // Same centered empty state as the other racks: the whole drop zone is the action.
+                VStack(spacing: RackLayout.l) {
+                    DropZone(title: "Drop Files to Convert or Compress",
+                             subtitle: "Video, audio, images or folders. Everything runs on this Mac.",
+                             symbol: "arrow.triangle.2.circlepath") { model.add($0) }
+                        .frame(maxWidth: RackLayout.readableWidth)
+                    if model.ffmpegMissing { InlineMessage(text: ToolError.toolMissing("FFmpeg").localizedDescription) }
+                }
+                .padding(RackLayout.xxl)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .transition(.opacity)
+            } else {
+                ScrollView {
+                    content
+                        .frame(maxWidth: 920)
+                        .padding(RackLayout.xl)
+                        .frame(maxWidth: .infinity)
+                }
+            }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) { statusBar }
         .navigationTitle("Convert & Compress")
@@ -38,25 +54,8 @@ struct MediaToolView: View {
         return "\(count) \(count == 1 ? "file" : "files")"
     }
 
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("Convert & Compress").font(.largeTitle.weight(.semibold))
-            Text("Drop files, then choose what to do with them. Everything runs on this Mac.").foregroundStyle(.secondary)
-        }
-    }
-
     @ViewBuilder private var content: some View {
-        if model.queue.isEmpty {
             VStack(alignment: .leading, spacing: 16) {
-                header
-                DropZone(title: "Drop Files Here",
-                         subtitle: "Video, audio, images or folders. Everything runs on this Mac.") { model.add($0) }
-                if model.ffmpegMissing { InlineMessage(text: ToolError.toolMissing("FFmpeg").localizedDescription) }
-            }
-            .transition(.opacity)
-        } else {
-            VStack(alignment: .leading, spacing: 16) {
-                header
                 ViewThatFits(in: .horizontal) {
                     HStack(alignment: .top, spacing: 24) {
                         filesColumn.frame(minWidth: 320, idealWidth: 400, maxWidth: 440)
@@ -67,7 +66,6 @@ struct MediaToolView: View {
                 if model.ffmpegMissing { InlineMessage(text: ToolError.toolMissing("FFmpeg").localizedDescription) }
             }
             .transition(.opacity)
-        }
     }
 
     // MARK: Files
