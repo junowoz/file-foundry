@@ -75,10 +75,9 @@ struct MainView: View {
     private var isScanning: Bool { viewModel.scanState == .indexing || viewModel.scanState == .paused }
 
     var body: some View {
-        NavigationSplitView {
+        HSplitView {
             SidebarView(viewModel: viewModel, selectedFolder: $selectedFolder)
-                .navigationSplitViewColumnWidth(min: 220, ideal: 280, max: 340)
-        } detail: {
+                .frame(minWidth: 220, idealWidth: 280, maxWidth: 340)
             DuplicateGroupsView(
                 viewModel: viewModel,
                 addFolders: { FolderPicker.choose(into: viewModel, selection: $selectedFolder) },

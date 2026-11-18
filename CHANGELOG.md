@@ -2,6 +2,16 @@
 
 All notable changes to File Foundry will be documented in this file.
 
+## [1.2.1] - 2026-11-18
+
+### Fixed
+
+- The rack list on the left went blank in Transcribe and Duplicate Finder because their own split views were nested inside the app's. They now use a plain resizable split.
+- The Meeting Scribe import card did not appear: macOS hides another app's data until access is allowed, so the library looked missing. File Foundry now reads it directly, which shows the macOS prompt, and explains how to allow access if it was denied.
+- Transcribe stayed empty and unresponsive while macOS waited for Keychain permission (each new build asks again). The library now loads first and the API key follows.
+- The Meeting Scribe import is offered even if something was already transcribed in File Foundry.
+- The Transcribe file picker opens as a sheet on the window instead of a blocking app-wide panel.
+
 ## [1.2.0] - 2026-11-18
 
 ### Added

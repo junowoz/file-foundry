@@ -55,9 +55,14 @@ enum ScribeLibraryImporter {
         let index = legacyRoot.appending(path: indexName)
         let data: Data
         do {
-            guard FileManager.default.fileExists(atPath: index.path) else { return nil }
+            // Read directly: macOS app-data protection makes `fileExists` report false for another app's
+            // container until the user allows access, and the read is what triggers that prompt.
             data = try Data(contentsOf: index)
-        } catch { throw map(error) }
+        } catch {
+            if isMissing(error) && !containerExists { return nil }
+            if isMissing(error) { throw ImportError.permissionDenied }
+            throw map(error)
+        }
         guard let meetings = try? JSONDecoder().decode([Meeting].self, from: data) else { throw ImportError.unreadableLegacyIndex }
         return Probe(count: meetings.count, bytes: allocatedSize(of: legacyRoot.appending(path: "Meetings", directoryHint: .isDirectory)))
     }
@@ -121,8 +126,11 @@ enum ScribeLibraryImporter {
         let legacy: [Meeting]
         let folders: [URL]
         do {
-            guard manager.fileExists(atPath: legacyIndex.path) else { throw ImportError.missingLibrary }
-            let data = try Data(contentsOf: legacyIndex)
+            let data: Data
+            do { data = try Data(contentsOf: legacyIndex) } catch {
+                guard isMissing(error) else { throw error }
+                throw containerExists ? ImportError.permissionDenied : ImportError.missingLibrary
+            }
             guard let decoded = try? JSONDecoder().decode([Meeting].self, from: data) else { throw ImportError.unreadableLegacyIndex }
             legacy = decoded
             folders = ((try? manager.contentsOfDirectory(
@@ -203,6 +211,18 @@ enum ScribeLibraryImporter {
     }
 
     // MARK: Helpers
+
+    /// True when Meeting Scribe ever ran on this Mac. Listing `~/Library/Containers` is not protected.
+    static var containerExists: Bool {
+        let containers = FileManager.default.homeDirectoryForCurrentUser.appending(path: "Library/Containers", directoryHint: .isDirectory)
+        return ((try? FileManager.default.contentsOfDirectory(atPath: containers.path)) ?? []).contains(legacyBundleIdentifier)
+    }
+
+    private static func isMissing(_ error: Error) -> Bool {
+        let ns = error as NSError
+        return (ns.domain == NSCocoaErrorDomain && [NSFileReadNoSuchFileError, NSFileNoSuchFileError].contains(ns.code))
+            || (ns.domain == NSPOSIXErrorDomain && ns.code == Int(ENOENT))
+    }
 
     static func map(_ error: Error) -> ImportError {
         if let known = error as? ImportError { return known }

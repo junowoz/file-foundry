@@ -15,21 +15,21 @@ struct TranscribeRootView: View {
     }
 
     var body: some View {
-        NavigationSplitView {
+        // HSplitView, not NavigationSplitView: this rack already sits in the app's split view, and nesting
+        // split views blanks the rack list and duplicates the sidebar column.
+        HSplitView {
             ScribeSidebarView(store: store, openSettings: { showSettings = true })
-                .navigationSplitViewColumnWidth(min: 230, ideal: 280, max: 360)
-        } detail: {
+                .frame(minWidth: 230, idealWidth: 280, maxWidth: 360)
             VStack(spacing: 0) {
                 ScribeLegacyImportCard(store: store)
-                if !store.hasAPIKey && store.isLoaded { apiKeyBanner }
+                if !store.hasAPIKey && store.isKeyLoaded { apiKeyBanner }
                 if let meeting = store.selectedMeeting {
                     ScribeMeetingDetailView(store: store, meeting: meeting).id(meeting.id)
                 } else {
                     ScribeEmptyLibraryView(importAction: chooseMedia, recordAction: beginRecording)
                 }
-            }.frame(maxWidth: .infinity, maxHeight: .infinity)
+            }.frame(minWidth: 380, maxWidth: .infinity, maxHeight: .infinity)
         }
-        .navigationSplitViewStyle(.balanced)
         .overlay {
             if isDropTarget {
                 ZStack {
@@ -140,7 +140,12 @@ struct TranscribeRootView: View {
         panel.allowsMultipleSelection = true
         panel.canChooseDirectories = false
         panel.allowedContentTypes = ScribeMediaProcessor.supportedContentTypes
-        if panel.runModal() == .OK { store.importMedia(panel.urls) }
+        // A sheet keeps the window and its tasks alive; an app-modal panel froze the rack while open.
+        let handle: (NSApplication.ModalResponse) -> Void = { response in
+            if response == .OK { store.importMedia(panel.urls) }
+        }
+        if let window = NSApp.keyWindow ?? NSApp.mainWindow { panel.beginSheetModal(for: window, completionHandler: handle) }
+        else { handle(panel.runModal()) }
     }
 }
 

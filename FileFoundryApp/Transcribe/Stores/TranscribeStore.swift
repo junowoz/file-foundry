@@ -25,6 +25,7 @@ final class TranscribeStore: ObservableObject {
     private let storageDirectory: URL?
     private let trashItem: (URL) throws -> Void
     private var historyIsReadable = true
+    private var didResumePending = false
     private let defaults: UserDefaults
     private let resumePending: Bool
     private var importTask: Task<Void, Never>?
@@ -34,6 +35,9 @@ final class TranscribeStore: ObservableObject {
     @Published private(set) var legacyOffer: LegacyOffer?
     @Published private(set) var importState: ImportState = .idle
     @Published private(set) var isLoaded = false
+    /// False until the Keychain answered. The key loads after the library because macOS may hold the read
+    /// behind an "allow access" prompt (every new ad-hoc build is a new signature).
+    @Published private(set) var isKeyLoaded = false
     /// Set when a flow needs the settings sheet (e.g. missing API key). The root view presents it.
     @Published var settingsRequested = false
 
@@ -59,6 +63,7 @@ final class TranscribeStore: ObservableObject {
             Task { @MainActor in self?.handleCaptureError(error) }
         }
         if !deferLoading {
+            isKeyLoaded = true
             loadMeetings()
             finishLoading()
         }
@@ -68,15 +73,18 @@ final class TranscribeStore: ObservableObject {
     func bootstrap() async {
         guard !isLoaded else { return }
         let url = indexURL
-        async let key = Task.detached(priority: .userInitiated) { ScribeKeychainStore.loadAPIKey() }.value
         let result = await Task.detached(priority: .userInitiated) { () -> Result<[Meeting], Error>? in
             guard FileManager.default.fileExists(atPath: url.path) else { return nil }
             return Result { try JSONDecoder().decode([Meeting].self, from: Data(contentsOf: url)) }
         }.value
-        if apiKey.isEmpty { apiKey = await key }
         apply(loaded: result)
         finishLoading()
         await refreshLegacyOffer()
+        // Never block the library on the Keychain: a pending macOS prompt used to leave the rack empty.
+        let key = await Task.detached(priority: .userInitiated) { ScribeKeychainStore.loadAPIKey() }.value
+        if apiKey.isEmpty { apiKey = key }
+        isKeyLoaded = true
+        resumePendingJobs()
     }
 
     private func finishLoading() {
@@ -84,7 +92,13 @@ final class TranscribeStore: ObservableObject {
         for meeting in meetings where [.preparing, .uploading].contains(meeting.status) {
             update(meeting.id) { $0.status = .failed; $0.errorMessage = "O app foi fechado antes de receber um ID da AssemblyAI. Tente novamente." }
         }
-        if resumePending, hasAPIKey {
+        isLoaded = true
+        resumePendingJobs()
+    }
+
+    private func resumePendingJobs() {
+        if resumePending, hasAPIKey, !didResumePending {
+            didResumePending = true
             for pending in meetings where [.transcribing, .summarizing].contains(pending.status) {
                 if pending.status == .summarizing, !pending.text.isEmpty {
                     retrySummary(pending)
@@ -93,7 +107,6 @@ final class TranscribeStore: ObservableObject {
                 }
             }
         }
-        isLoaded = true
     }
 
     /// True while a recording, a transcription or a queued job is running. Use it to confirm quitting.
@@ -166,7 +179,8 @@ final class TranscribeStore: ObservableObject {
     // MARK: Library import (Meeting Scribe)
 
     func refreshLegacyOffer() async {
-        guard meetings.isEmpty, historyIsReadable, !defaults.bool(forKey: Self.legacyDismissedKey) else { legacyOffer = nil; return }
+        // Offered even when the library already has items: the import skips meetings that are already here.
+        guard historyIsReadable, !defaults.bool(forKey: Self.legacyDismissedKey) else { legacyOffer = nil; return }
         legacyOffer = await probeLegacy()
     }
 
