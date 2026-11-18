@@ -11,8 +11,12 @@ All notable changes to File Foundry will be documented in this file.
 
 ### Fixed
 
-- Convert & Compress: the empty state is back when no files are added.
-- Convert & Compress: the folder header no longer shows wrong information.
+- Convert & Compress: the empty screen matches the other racks and no longer repeats the title.
+- Duplicate Finder: the "Folders" header is no longer a white bar.
+
+### Safety
+
+- App Cleaner only looks in the Library folders where apps keep their files and matches by the app's identifier, never by searching the whole disk for a name. It never deletes anything permanently, and it names every large folder of app data before you confirm.
 
 ## [1.3.0] - 2026-11-18
 
