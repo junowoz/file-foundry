@@ -4,42 +4,31 @@ import SwiftUI
 
 struct MainView: View {
     @StateObject private var viewModel = MainViewModel()
-    @StateObject private var updateViewModel = AppUpdateViewModel()
     @State private var selectedFolder: URL?
     @State private var showTrashConfirmation = false
-    @State private var showUpdater = false
     @State private var showPreview = false
+    @State private var hasAutoOpenedPreview = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    private var isScanning: Bool { viewModel.scanState == .indexing || viewModel.scanState == .paused }
 
     var body: some View {
         HSplitView {
             SidebarView(viewModel: viewModel, selectedFolder: $selectedFolder)
-                .frame(minWidth: 220, idealWidth: 280, maxWidth: 340)
+                .frame(minWidth: RackLayout.paneMin, idealWidth: RackLayout.paneIdeal, maxWidth: RackLayout.paneMax)
             DuplicateGroupsView(
                 viewModel: viewModel,
                 addFolders: { FolderPicker.choose(into: viewModel, selection: $selectedFolder) },
                 startScan: { viewModel.startScan() }
             )
-            .frame(minWidth: 320)
+            .frame(minWidth: RackLayout.contentMin)
             .inspector(isPresented: $showPreview) {
                 FilePreviewView(viewModel: viewModel)
                     .inspectorColumnWidth(min: 240, ideal: 340, max: 480)
             }
         }
+        .navigationTitle("Duplicate Finder")
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
                 scanControl
-
-                if isScanning {
-                    Button {
-                        viewModel.cancelScan()
-                    } label: {
-                        Label("Cancel Scan", systemImage: "xmark")
-                    }
-                    .help("Cancel the scan")
-                }
 
                 Button {
                     showTrashConfirmation = true
@@ -50,21 +39,23 @@ struct MainView: View {
                 .buttonStyle(.borderedProminent)
                 .tint(.red)
                 .disabled(!viewModel.canMoveSelectedFiles)
-                .help("Move the selected copies to the Trash. Nothing is deleted permanently.")
+                .help("Move the selected copies to the Trash. You can restore them from the Trash.")
+
+                Button {
+                    showPreview.toggle()
+                } label: {
+                    Label("Preview", systemImage: "sidebar.trailing")
+                }
+                .keyboardShortcut("i", modifiers: [.command, .option])
+                .help("Show or hide the file preview")
 
                 Menu {
                     Button {
                         chooseJSONExport()
                     } label: {
-                        Label("Export Audit JSON…", systemImage: "square.and.arrow.up")
+                        Label("Export Report…", systemImage: "square.and.arrow.up")
                     }
                     .disabled(viewModel.scanResult == nil)
-
-                    Button {
-                        showUpdater = true
-                    } label: {
-                        Label("Check for Updates…", systemImage: "arrow.down.circle")
-                    }
 
                     Divider()
 
@@ -76,15 +67,7 @@ struct MainView: View {
                 } label: {
                     Label("More", systemImage: "ellipsis.circle")
                 }
-                .help("Export, updates and settings")
-
-                Button {
-                    showPreview.toggle()
-                } label: {
-                    Label("Preview", systemImage: "sidebar.trailing")
-                }
-                .keyboardShortcut("i", modifiers: [.command, .option])
-                .help("Show or hide the file preview")
+                .help("Export and settings")
             }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
@@ -96,7 +79,10 @@ struct MainView: View {
             // Open the preview the first time something is selected.
             if newValue != nil, !hasAutoOpenedPreview { showPreview = true; hasAutoOpenedPreview = true }
         }
-        .alert("Move \(viewModel.totalRemovableFiles) file(s) to Trash?", isPresented: $showTrashConfirmation) {
+        .alert(
+            "Move \(viewModel.totalRemovableFiles) \(viewModel.totalRemovableFiles == 1 ? "File" : "Files") to Trash?",
+            isPresented: $showTrashConfirmation
+        ) {
             Button("Move to Trash", role: .destructive) {
                 Task {
                     await viewModel.moveSelectedToTrash()
@@ -104,17 +90,9 @@ struct MainView: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("About \(AppFormatters.fileSize(viewModel.potentialSavings)) will be reclaimed. Duplicate Finder never deletes files permanently, so you can restore them from the Trash.")
-        }
-        .sheet(isPresented: $showUpdater) {
-            AppUpdateSheetView(viewModel: updateViewModel)
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .fileFoundryShowUpdater)) { _ in
-            showUpdater = true
+            Text("About \(AppFormatters.fileSize(viewModel.potentialSavings)) will be freed. You can restore the files from the Trash.")
         }
     }
-
-    @State private var hasAutoOpenedPreview = false
 
     private var trashTitle: String {
         viewModel.totalRemovableFiles > 0 ? "Move to Trash (\(viewModel.totalRemovableFiles))" : "Move to Trash"
@@ -143,11 +121,13 @@ struct MainView: View {
         panel.allowedContentTypes = [.json]
         panel.nameFieldStringValue = "file-foundry-audit-report.json"
         panel.canCreateDirectories = true
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-        do {
-            try viewModel.exportJSON(to: url)
-        } catch {
-            viewModel.statusMessage = error.localizedDescription
+        panel.presentAsSheet { ok in
+            guard ok, let url = panel.url else { return }
+            do {
+                try viewModel.exportJSON(to: url)
+            } catch {
+                viewModel.statusMessage = error.localizedDescription
+            }
         }
     }
 }

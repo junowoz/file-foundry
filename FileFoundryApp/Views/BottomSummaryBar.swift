@@ -1,53 +1,25 @@
 import FileFoundryCore
 import SwiftUI
 
+/// Bottom status bar of Duplicate Finder: current status on the left, scan counts on the right.
 struct BottomSummaryBar: View {
     @ObservedObject var viewModel: MainViewModel
 
     var body: some View {
-        ViewThatFits(in: .horizontal) {
-            bar(showFiles: true, showStatus: true)
-            bar(showFiles: false, showStatus: true)
-            bar(showFiles: false, showStatus: false)
-        }
-        .font(.callout)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.bar)
-        .overlay(alignment: .top) { Divider() }
-    }
-
-    private func bar(showFiles: Bool, showStatus: Bool) -> some View {
-        HStack(spacing: 16) {
-            HStack(spacing: 6) {
-                Image(systemName: "externaldrive.badge.checkmark")
-                    .foregroundStyle(.green)
-                Text("Reclaimable")
-                    .foregroundStyle(.secondary)
-                Text(AppFormatters.fileSize(viewModel.potentialSavings))
-                    .fontWeight(.semibold)
-                    .monospacedDigit()
-            }
-            if showFiles {
-                stat("Files", viewModel.totalScannedFiles)
-            }
-            stat("Groups", viewModel.totalDuplicateGroups)
-            stat("Selected", viewModel.totalRemovableFiles)
-            Spacer(minLength: 8)
-            if showStatus {
-                Text(viewModel.statusMessage)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+        RackStatusBar(status: viewModel.statusMessage, symbol: nil) {
+            HStack(spacing: RackLayout.l) {
+                stat("Reclaimable", AppFormatters.fileSize(viewModel.potentialSavings))
+                stat("Files", "\(viewModel.totalScannedFiles)")
+                stat("Groups", "\(viewModel.totalDuplicateGroups)")
+                stat("Selected", "\(viewModel.totalRemovableFiles)")
             }
         }
-        .fixedSize(horizontal: !showStatus, vertical: false)
     }
 
-    private func stat(_ label: String, _ value: Int) -> some View {
-        HStack(spacing: 4) {
+    private func stat(_ label: String, _ value: String) -> some View {
+        HStack(spacing: RackLayout.xs) {
             Text(label).foregroundStyle(.secondary)
-            Text("\(value)").fontWeight(.medium).monospacedDigit()
+            Text(value).fontWeight(.medium)
         }
     }
 }

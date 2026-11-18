@@ -14,10 +14,28 @@ struct MediaToolView: View {
                 .padding(24)
                 .frame(maxWidth: .infinity)
         }
+        .safeAreaInset(edge: .bottom, spacing: 0) { statusBar }
         .navigationTitle("Convert & Compress")
         .animation(spring, value: model.queue.items.map(\.id))
         .animation(spring, value: model.queue.kinds)
         .onDisappear { model.cancel() }
+    }
+
+    /// Queue status at the bottom: what is happening now, and how many files are done.
+    private var statusBar: some View {
+        RackStatusBar(status: statusText, symbol: nil) {
+            if model.queue.doneCount > 0 {
+                Text("\(model.queue.doneCount) done")
+            }
+        }
+    }
+
+    private var statusText: String {
+        if model.queue.isBusy { return "Working…" }
+        if model.queue.isProbing { return "Reading files…" }
+        let count = model.queue.items.count
+        if count == 0 { return "No files" }
+        return "\(count) \(count == 1 ? "file" : "files")"
     }
 
     private var header: some View {
@@ -31,8 +49,8 @@ struct MediaToolView: View {
         if model.queue.isEmpty {
             VStack(alignment: .leading, spacing: 16) {
                 header
-                DropZone(title: "Drop files to convert or compress",
-                         subtitle: "Video, audio, images, folders or any file · or click to choose") { model.add($0) }
+                DropZone(title: "Drop Files Here",
+                         subtitle: "Video, audio, images or folders. Everything runs on this Mac.") { model.add($0) }
                 if model.ffmpegMissing { InlineMessage(text: ToolError.toolMissing("FFmpeg").localizedDescription) }
             }
             .transition(.opacity)
@@ -68,7 +86,7 @@ struct MediaToolView: View {
             .background(.background.secondary, in: RoundedRectangle(cornerRadius: 12))
             .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color.primary.opacity(0.08)))
 
-            DropZone(title: "Add more files", subtitle: "or drop them here", compact: true) { model.add($0) }
+            DropZone(title: "Add More Files", subtitle: "or drop them here", compact: true) { model.add($0) }
 
             HStack {
                 if model.queue.hasFinished {

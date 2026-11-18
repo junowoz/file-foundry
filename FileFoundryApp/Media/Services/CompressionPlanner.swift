@@ -215,10 +215,10 @@ enum CompressionPlanner {
                 + audioArguments(hasAudio: info.hasAudio, copy: p.copyAudio, bitrate: p.audioBitrate)
                 + ["-map_metadata", "0", "-movflags", "+faststart", output.path]
             steps = [
-                CompressionStep(label: "Pass 1 of 2 · Analyzing", arguments: pass1, weight: 0.4),
-                CompressionStep(label: "Pass 2 of 2 · Encoding", arguments: pass2, weight: 0.6),
+                CompressionStep(label: "Step 1 of 2 · Analyzing", arguments: pass1, weight: 0.4),
+                CompressionStep(label: "Step 2 of 2 · Encoding", arguments: pass2, weight: 0.6),
             ]
-            summary = [r.codec.shortName, "2-pass", "\(ByteFormat.bitrate(p.videoBitrate)) video",
+            summary = [r.codec.shortName, "Target size","\(ByteFormat.bitrate(p.videoBitrate)) video",
                        info.hasAudio ? (p.copyAudio ? "audio copied" : "\(ByteFormat.bitrate(p.audioBitrate)) audio") : "no audio",
                        "\(p.outputHeight)p"].joined(separator: " · ")
         case .quality:
@@ -236,7 +236,7 @@ enum CompressionPlanner {
             let hi = Int(Double(r.originalBytes) * r.preset.estimatedFraction.upperBound)
             summary = r.hardware
                 ? "\(r.codec.shortName) · hardware · \(r.preset.title)"
-                : "\(r.codec.shortName) · CRF \(crf) · \(r.preset.title)"
+                : "\(r.codec.shortName) · \(r.preset.title)"
             if r.hardware { notes.append("Hardware encoding is much faster. Files are usually a little larger than software encoding.") }
             notes.append("Estimate only: roughly \(ByteFormat.string(lo)) to \(ByteFormat.string(hi)). Actual size depends on the content.")
         }

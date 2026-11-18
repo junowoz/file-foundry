@@ -124,7 +124,10 @@ final class MediaModel {
         panel.canChooseDirectories = true
         panel.canCreateDirectories = true
         panel.prompt = "Choose"
-        if panel.runModal() == .OK { outputDirectory = panel.url }
+        panel.presentAsSheet { [weak self] ok in
+            guard ok, let url = panel.url else { return }
+            self?.outputDirectory = url
+        }
     }
 
     // MARK: Running

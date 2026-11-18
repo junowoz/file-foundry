@@ -36,6 +36,6 @@ struct DuplicateGroupRowView: View {
         if group.allowsRemoval {
             return "\(selectedRemovalCount) to remove · \(AppFormatters.fileSize(group.size)) each · saves \(AppFormatters.fileSize(selectedSavings))"
         }
-        return "Review only · verify with Exact matching before cleanup"
+        return "Review only. Switch to Identical Content to remove copies."
     }
 }

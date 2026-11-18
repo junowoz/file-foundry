@@ -17,7 +17,7 @@ struct KeepRulesView: View {
                 }
                 .keyboardShortcut(.defaultAction)
             }
-            .padding(20)
+            .padding(RackLayout.xl)
 
             Divider()
 
@@ -102,7 +102,9 @@ struct KeepRulesView: View {
         panel.canCreateDirectories = false
         panel.prompt = "Add Location"
 
-        guard panel.runModal() == .OK else { return }
-        panel.urls.forEach(viewModel.addPreferredFolder)
+        panel.presentAsSheet { ok in
+            guard ok else { return }
+            panel.urls.forEach(viewModel.addPreferredFolder)
+        }
     }
 }

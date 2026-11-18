@@ -43,7 +43,8 @@ public final class MainViewModel: ObservableObject {
         } else {
             initialOptions.preferredFolderPaths = initialOptions.preferredFolderPaths.map(Self.canonicalFolderPath)
         }
-        initialOptions.ignorePackages = !savedSettings.includePackages
+        // Packages (.app, .photoslibrary, …) are always single items and are skipped.
+        initialOptions.ignorePackages = true
         initialOptions.compareMode = .safe
         self.folders = folders
         self.options = initialOptions
@@ -203,7 +204,7 @@ public final class MainViewModel: ObservableObject {
             return
         }
         guard options.matchMode != .metadata || options.metadataCriteria.hasSelection else {
-            statusMessage = "Select at least one metadata field."
+            statusMessage = "Pick at least one detail to match by."
             return
         }
         if options.matchMode == .exactContent {
@@ -296,7 +297,7 @@ public final class MainViewModel: ObservableObject {
 
     public func setRemovalSelection(_ selected: Bool, file: ScannedFile, group: DuplicateGroup) {
         guard group.allowsRemoval else {
-            statusMessage = "Run Exact matching before moving metadata matches to Trash."
+            statusMessage = "Switch to Identical Content before moving these matches to Trash."
             return
         }
         let groupIDs = Set(group.files.map(\.id))
@@ -329,7 +330,7 @@ public final class MainViewModel: ObservableObject {
 
     public func markFileToKeep(_ file: ScannedFile, in group: DuplicateGroup) {
         guard group.allowsRemoval else {
-            statusMessage = "Metadata matches are review-only. Run Exact matching to verify them."
+            statusMessage = "Matching Details only finds candidates. Switch to Identical Content to verify them."
             return
         }
         let groupIDs = Set(group.files.map(\.id))

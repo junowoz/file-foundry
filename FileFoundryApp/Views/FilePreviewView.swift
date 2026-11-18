@@ -69,17 +69,16 @@ struct FilePreviewView: View {
                                 metadata(label: "Duration", value: AppFormatters.duration(duration))
                             }
                             metadata(label: "Verification", value: group?.verificationLevel.label ?? "Not available")
-                            metadata(label: "SHA-256", value: group?.sha256.isEmpty == false ? group?.sha256 ?? "Not available" : "Not calculated", mono: true)
                         }
                     }
                     .padding(16)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
             } else {
-                EmptyStateView(
-                    title: "No selection",
-                    message: "Select a file to preview it. Review before moving anything to Trash.",
-                    symbol: "doc.viewfinder"
+                RackEmptyState(
+                    symbol: "doc.viewfinder",
+                    title: "No Selection",
+                    message: "Select a file to preview it. Review before moving anything to Trash."
                 )
             }
         }
