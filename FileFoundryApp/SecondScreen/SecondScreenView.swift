@@ -40,18 +40,9 @@ private struct ConnectionBar: View {
     let controller: SecondScreenController
 
     var body: some View {
-        HStack(spacing: 8) {
-            Circle().fill(tint).frame(width: 8, height: 8)
-            Text(summary).lineLimit(1).truncationMode(.middle)
-            Spacer(minLength: 12)
+        RackStatusBar(status: summary) {
+            Circle().fill(tint).frame(width: 8, height: 8).accessibilityHidden(true)
         }
-        .font(.callout)
-        .foregroundStyle(.secondary)
-        .padding(.horizontal, 24)
-        .padding(.vertical, 8)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.bar)
-        .overlay(alignment: .top) { Divider() }
         .help(details)
         .accessibilityElement(children: .combine)
     }

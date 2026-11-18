@@ -7,11 +7,11 @@ public enum VerificationLevel: String, Codable, Hashable, CaseIterable, Sendable
 
     public var label: String {
         switch self {
-        case .metadataMatch: "Metadata match"
-        case .sameSizeOnly: "Same size only"
-        case .partialHashMatch: "Partial hash match"
-        case .sha256Match: "SHA-256 match"
-        case .byteByByteConfirmed: "Byte-by-byte confirmed"
+        case .metadataMatch: "Matching details"
+        case .sameSizeOnly: "Same size"
+        case .partialHashMatch: "Partly checked"
+        case .sha256Match: "Identical content"
+        case .byteByByteConfirmed: "Identical content, fully checked"
         }
     }
 }
