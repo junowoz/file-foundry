@@ -73,7 +73,8 @@ struct ScribeSidebarView: View {
                         .transition(.opacity.combined(with: .scale(scale: 0.98)))
                 }
             }
-            .listStyle(.sidebar)
+            .listStyle(.inset)
+            .scrollContentBackground(.hidden)
             .animation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 1), value: items.map(\.id))
             .onDeleteCommand { requestDelete(selection) }
             .overlay { if items.isEmpty { emptyState } }

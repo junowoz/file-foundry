@@ -25,7 +25,8 @@ struct FolderListView: View {
                     }
                 }
             }
-            .listStyle(.sidebar)
+            .listStyle(.inset)
+            .scrollContentBackground(.hidden)
             .frame(minHeight: 72, idealHeight: 160, maxHeight: 240)
 
             HStack(spacing: 8) {
