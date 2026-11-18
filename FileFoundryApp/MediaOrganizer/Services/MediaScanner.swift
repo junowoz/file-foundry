@@ -16,7 +16,7 @@ private final class EnumerationErrorCollector: @unchecked Sendable {
 enum MediaScannerError: LocalizedError {
     case cannotEnumerate(URL)
     var errorDescription: String? {
-        switch self { case .cannotEnumerate(let url): "Não foi possível enumerar a origem: \(url.path)" }
+        switch self { case .cannotEnumerate(let url): "Couldn't read the source folder: \(url.path)" }
     }
 }
 
@@ -49,16 +49,16 @@ actor MediaScanner {
                     continue
                 }
                 if values.isSymbolicLink == true {
-                    records.append(MediaRecord(sourceRootID: source.id, sourceURL: url, relativePath: relative, filename: url.lastPathComponent, fileSize: 0, modificationDate: values.contentModificationDate, kind: .other, captureMoment: nil, disposition: .ignoredSymbolicLink, note: "Link simbólico não seguido"))
+                    records.append(MediaRecord(sourceRootID: source.id, sourceURL: url, relativePath: relative, filename: url.lastPathComponent, fileSize: 0, modificationDate: values.contentModificationDate, kind: .other, captureMoment: nil, disposition: .ignoredSymbolicLink, note: "Symbolic link not followed"))
                     continue
                 }
                 if values.isPackage == true {
-                    records.append(MediaRecord(sourceRootID: source.id, sourceURL: url, relativePath: relative, filename: url.lastPathComponent, fileSize: 0, modificationDate: values.contentModificationDate, kind: .other, captureMoment: nil, disposition: .ignoredPackage, note: "Pacote não percorrido"))
+                    records.append(MediaRecord(sourceRootID: source.id, sourceURL: url, relativePath: relative, filename: url.lastPathComponent, fileSize: 0, modificationDate: values.contentModificationDate, kind: .other, captureMoment: nil, disposition: .ignoredPackage, note: "Package not scanned"))
                     continue
                 }
                 guard values.isRegularFile == true else { continue }
                 if url.lastPathComponent == ".DS_Store" || url.lastPathComponent.hasPrefix("._") {
-                    records.append(MediaRecord(sourceRootID: source.id, sourceURL: url, relativePath: relative, filename: url.lastPathComponent, fileSize: Int64(values.fileSize ?? 0), modificationDate: values.contentModificationDate, kind: .other, captureMoment: nil, disposition: .ignoredSystemFile, note: "Arquivo de sistema ignorado"))
+                    records.append(MediaRecord(sourceRootID: source.id, sourceURL: url, relativePath: relative, filename: url.lastPathComponent, fileSize: Int64(values.fileSize ?? 0), modificationDate: values.contentModificationDate, kind: .other, captureMoment: nil, disposition: .ignoredSystemFile, note: "System file skipped"))
                     continue
                 }
                 let kind = classifier.classify(url)

@@ -3,13 +3,13 @@ import Foundation
 struct ReportWriter {
     func write(manifest: ExportManifest, to root: DestinationRoot) throws {
         let policy = FileSystemPolicy()
-        for relativePath in ["Relatórios/manifest.json", "Relatórios/relatorio.csv", "Relatórios/relatorio.md"] {
+        for relativePath in ["Reports/manifest.json", "Reports/report.csv", "Reports/report.md"] {
             _ = try policy.validatedDestination(relativePath: relativePath, in: root)
             try policy.validateDestinationAncestors(relativePath: relativePath, in: root)
         }
-        let reports = root.url.appendingPathComponent("Relatórios", isDirectory: true)
+        let reports = root.url.appendingPathComponent("Reports", isDirectory: true)
         try FileManager.default.createDirectory(at: reports, withIntermediateDirectories: true)
-        try policy.validateDestinationAncestors(relativePath: "Relatórios/manifest.json", in: root)
+        try policy.validateDestinationAncestors(relativePath: "Reports/manifest.json", in: root)
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         encoder.dateEncodingStrategy = .iso8601
@@ -20,22 +20,22 @@ struct ReportWriter {
         for record in manifest.records {
             csv += [record.sourceRelativePath, record.destinationRelativePath, record.sha256 ?? "", String(record.bytes), record.status.rawValue, record.error ?? ""].map(escaped).joined(separator: ",") + "\n"
         }
-        try Data(csv.utf8).write(to: reports.appendingPathComponent("relatorio.csv"), options: .withoutOverwriting)
+        try Data(csv.utf8).write(to: reports.appendingPathComponent("report.csv"), options: .withoutOverwriting)
 
         let verified = manifest.records.filter { $0.status == .committedVerified }
         let failed = manifest.records.filter { $0.status == .failed }
         let markdown = """
-        # Relatório File Foundry — Media Organizer
+        # File Foundry Media Organizer Report
 
-        - Operação: \(manifest.operationID.uuidString)
-        - Arquivos verificados por SHA-256: \(verified.count)
-        - Arquivos com falha: \(failed.count)
-        - Bytes copiados e verificados: \(verified.reduce(0) { $0 + $1.bytes })
+        - Operation: \(manifest.operationID.uuidString)
+        - Files verified by checksum: \(verified.count)
+        - Failed files: \(failed.count)
+        - Bytes copied and verified: \(verified.reduce(0) { $0 + $1.bytes })
         - Template: `\(manifest.template)`
 
-        \(failed.isEmpty ? "Exportação concluída sem falhas." : "Atenção: há itens que não foram exportados. Consulte o manifest JSON.")
+        \(failed.isEmpty ? "Export completed without failures." : "Warning: some items were not exported. See the JSON manifest.")
         """
-        try Data(markdown.utf8).write(to: reports.appendingPathComponent("relatorio.md"), options: .withoutOverwriting)
+        try Data(markdown.utf8).write(to: reports.appendingPathComponent("report.md"), options: .withoutOverwriting)
     }
 
     static func csvCell(_ value: String) -> String {

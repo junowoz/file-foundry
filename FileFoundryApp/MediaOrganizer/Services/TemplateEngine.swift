@@ -9,11 +9,11 @@ enum TemplateError: LocalizedError, Equatable {
 
     var errorDescription: String? {
         switch self {
-        case .empty: "O template não pode ficar vazio."
-        case .absolutePath: "O template precisa produzir um caminho relativo."
-        case .unsafeComponent(let value): "Componente de caminho inseguro: \(value)"
-        case .unknownToken(let token): "Token desconhecido: \(token)"
-        case .missingDate: "O item não possui data confiável."
+        case .empty: "The template can't be empty."
+        case .absolutePath: "The template must produce a relative path."
+        case .unsafeComponent(let value): "Unsafe path component: \(value)"
+        case .unknownToken(let token): "Unknown token: \(token)"
+        case .missingDate: "This item has no reliable date."
         }
     }
 }
@@ -39,7 +39,7 @@ struct TemplateEngine: Sendable {
         }
     }
 
-    func resolve(_ template: String, record: MediaRecord, sourceFolder: String, locale: Locale = Locale(identifier: "pt_BR")) throws -> String {
+    func resolve(_ template: String, record: MediaRecord, sourceFolder: String, locale: Locale = .current) throws -> String {
         try validate(template)
         guard let moment = record.captureMoment, let year = moment.year, let month = moment.month else { throw TemplateError.missingDate }
         let monthSymbols = Calendar(identifier: .gregorian).monthSymbols
@@ -56,9 +56,9 @@ struct TemplateEngine: Sendable {
             "MonthShort": shortName,
             "DD": String(format: "%02d", moment.day ?? 1),
             "MediaType": safeToken(record.kind.folderName),
-            "Extension": safeToken(record.sourceURL.pathExtension.lowercased().isEmpty ? "Sem extensão" : record.sourceURL.pathExtension.lowercased()),
-            "CameraMake": "Desconhecido",
-            "CameraModel": "Desconhecido",
+            "Extension": safeToken(record.sourceURL.pathExtension.lowercased().isEmpty ? "No extension" : record.sourceURL.pathExtension.lowercased()),
+            "CameraMake": "Unknown",
+            "CameraModel": "Unknown",
             "SourceFolder": safeToken(sourceFolder)
         ]
         var result = template
@@ -77,7 +77,7 @@ struct TemplateEngine: Sendable {
         let forbidden = CharacterSet(charactersIn: "/\\:\0")
         let pieces = value.components(separatedBy: forbidden).filter { !$0.isEmpty }
         let joined = pieces.joined(separator: "-").trimmingCharacters(in: .whitespacesAndNewlines)
-        return joined.isEmpty || joined == "." || joined == ".." ? "Desconhecido" : String(joined.prefix(120))
+        return joined.isEmpty || joined == "." || joined == ".." ? "Unknown" : String(joined.prefix(120))
     }
 
     private func validateResolved(_ path: String) throws {
