@@ -2,6 +2,26 @@
 
 All notable changes to File Foundry will be documented in this file.
 
+## [1.3.0] - 2026-11-18
+
+### Added
+
+- File Foundry checks for updates on its own and shows an "Update Available" button in the toolbar. "Check for Updates…" is in the File Foundry menu.
+- The Android app checks for updates and installs them itself.
+- Racks can be reordered by dragging them in the sidebar (right-click → Reset Order to undo).
+
+### Changed
+
+- The whole app is in English, and every rack shares the same layout: an empty state with one clear action, a status bar at the bottom, and file pickers that no longer lock the rest of the app.
+- Releases now have only three files: `FileFoundry.dmg`, `FileFoundry-Android.apk` and `SHA256SUMS`. The README links straight to both downloads.
+- Duplicate Finder: plainer options. "Identical Content" and "Matching Details" replace the technical labels, and the macOS packages option is gone (apps and libraries are always skipped as single items).
+- Meeting summaries are written in the language of the transcript.
+- Media Organizer creates English folder names (Photos, Undated, Reports…) in new organized copies.
+
+### Upgrading from 1.2.x
+
+The 1.2 updater looks for files that no longer exist, so download `FileFoundry.dmg` once from the README link. From 1.3.0 on, updates install from inside the app.
+
 ## [1.2.1] - 2026-11-18
 
 ### Fixed
