@@ -2,8 +2,7 @@ import AppKit
 import FileFoundryCore
 import SwiftUI
 
-
-private enum FoundryModule: String, CaseIterable, Identifiable {
+enum FoundryModule: String, CaseIterable, Identifiable {
     case duplicates, organizer, media, transcribe, secondScreen
     var id: String { rawValue }
     var title: String {
@@ -31,11 +30,37 @@ private enum FoundryModule: String, CaseIterable, Identifiable {
         default: self = FoundryModule(rawValue: stored) ?? .duplicates
         }
     }
+
+    /// Applies a saved comma-separated order. Unknown and repeated values are dropped,
+    /// old names are migrated, and racks missing from the list are appended in default order.
+    static func ordered(from stored: String) -> [FoundryModule] {
+        var result: [FoundryModule] = []
+        for raw in stored.split(separator: ",").map({ $0.trimmingCharacters(in: .whitespaces) }) {
+            let module: FoundryModule
+            switch raw {
+            case "converter", "compressor": module = .media
+            default:
+                guard let known = FoundryModule(rawValue: raw) else { continue }
+                module = known
+            }
+            if !result.contains(module) { result.append(module) }
+        }
+        for module in allCases where !result.contains(module) { result.append(module) }
+        return result
+    }
+
+    static func serialize(_ modules: [FoundryModule]) -> String {
+        modules.map(\.rawValue).joined(separator: ",")
+    }
 }
 
 struct FileFoundryRootView: View {
     let mediaStore: AppStore
     @SceneStorage("selectedModule") private var selectedModule = FoundryModule.duplicates.rawValue
+    @AppStorage("rackOrder") private var rackOrder = ""
+    @AppStorage(AppUpdateViewModel.autoCheckDefaultsKey) private var autoCheckForUpdates = true
+    @StateObject private var updateViewModel = AppUpdateViewModel()
+    @State private var showUpdater = false
 
     private var module: Binding<FoundryModule> {
         Binding(
@@ -43,10 +68,24 @@ struct FileFoundryRootView: View {
             set: { selectedModule = $0.rawValue })
     }
 
+    private var orderedModules: [FoundryModule] { FoundryModule.ordered(from: rackOrder) }
+
     var body: some View {
         NavigationSplitView {
-            List(FoundryModule.allCases, selection: module) { item in
-                Label(item.title, systemImage: item.symbol).tag(item)
+            List(selection: module) {
+                ForEach(orderedModules) { item in
+                    Label(item.title, systemImage: item.symbol)
+                        .tag(item)
+                        .contextMenu {
+                            Button("Reset Order") { rackOrder = "" }
+                                .disabled(rackOrder.isEmpty)
+                        }
+                }
+                .onMove { source, destination in
+                    var modules = orderedModules
+                    modules.move(fromOffsets: source, toOffset: destination)
+                    rackOrder = FoundryModule.serialize(modules)
+                }
             }
             .navigationTitle("File Foundry")
             .listStyle(.sidebar)
@@ -61,6 +100,39 @@ struct FileFoundryRootView: View {
             }
         }
         .navigationSplitViewStyle(.balanced)
+        .toolbar {
+            ToolbarItem(placement: .automatic) {
+                if let release = updateViewModel.availableRelease {
+                    Button {
+                        showUpdater = true
+                    } label: {
+                        Text("Update Available")
+                            .font(.callout.weight(.medium))
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 3)
+                            .background(Color.accentColor.opacity(0.18), in: Capsule())
+                            .foregroundStyle(Color.accentColor)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Version \(release.version) is ready to install")
+                    .accessibilityLabel("Update Available, version \(release.version)")
+                }
+            }
+        }
+        .sheet(isPresented: $showUpdater) {
+            AppUpdateSheetView(viewModel: updateViewModel)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .fileFoundryShowUpdater)) { _ in
+            showUpdater = true
+        }
+        .task {
+            // Silent check at launch, then at most once every 24 hours while the app stays open.
+            while !Task.isCancelled {
+                if autoCheckForUpdates {
+                    await updateViewModel.checkSilentlyIfDue()
+                }
+                try? await Task.sleep(for: .seconds(60 * 60))
+            }
+        }
     }
 }
-

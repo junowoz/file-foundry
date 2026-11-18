@@ -5,7 +5,7 @@ APP_NAME="FileFoundry"
 UPDATER_NAME="FileFoundryUpdater"
 BUNDLE_ID="com.junowoz.filefoundry"
 UPDATER_BUNDLE_ID="com.junowoz.filefoundry.updater"
-VERSION="${VERSION:-1.2.1}"
+VERSION="${VERSION:-1.3.0}"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DIST_DIR="$ROOT_DIR/dist"
 APP_BUNDLE="$DIST_DIR/$APP_NAME.app"
@@ -131,8 +131,5 @@ fi
 codesign --force --sign "$CODESIGN_IDENTITY" --identifier "$UPDATER_BUNDLE_ID" "$UPDATER_BUNDLE"
 codesign --force --sign "$CODESIGN_IDENTITY" --identifier "$BUNDLE_ID" --entitlements "$ENTITLEMENTS" "$APP_BUNDLE"
 codesign --verify --deep --strict "$APP_BUNDLE"
-
-ditto -c -k --norsrc --noextattr --keepParent "$APP_BUNDLE" "$DIST_DIR/$APP_NAME.app.zip"
-shasum -a 256 "$DIST_DIR/$APP_NAME.app.zip" > "$DIST_DIR/$APP_NAME.app.zip.sha256"
 
 echo "Built $APP_BUNDLE"

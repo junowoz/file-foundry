@@ -74,6 +74,7 @@ public enum AppUpdateError: Error, LocalizedError {
     case invalidReleaseResponse
     case missingReleaseAsset(String)
     case invalidChecksumFile
+    case missingChecksumEntry(String)
     case checksumMismatch(expected: String, actual: String)
     case invalidAppBundle(String)
     case unsupportedBundleLocation(String)
@@ -90,7 +91,9 @@ public enum AppUpdateError: Error, LocalizedError {
         case .missingReleaseAsset(let name):
             "The GitHub release is missing \(name)."
         case .invalidChecksumFile:
-            "The update checksum file is invalid."
+            "The SHA256SUMS file is invalid."
+        case .missingChecksumEntry(let name):
+            "SHA256SUMS has no entry for \(name), so the update was not installed."
         case .checksumMismatch:
             "The downloaded update did not match its published checksum."
         case .invalidAppBundle(let reason):

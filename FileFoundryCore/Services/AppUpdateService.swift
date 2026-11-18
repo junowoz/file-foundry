@@ -18,6 +18,9 @@ public final class AppUpdateService: @unchecked Sendable {
         self.hashService = hashService
     }
 
+    public static let packageAssetName = "FileFoundry.dmg"
+    public static let checksumAssetName = "SHA256SUMS"
+
     public static func ephemeralConfiguration() -> URLSessionConfiguration {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.requestCachePolicy = .reloadIgnoringLocalAndRemoteCacheData
@@ -34,10 +37,10 @@ public final class AppUpdateService: @unchecked Sendable {
         }
 
         guard
-            let package = response.assets.first(where: { $0.name == "FileFoundry.app.zip" }),
-            let checksum = response.assets.first(where: { $0.name == "FileFoundry.app.zip.sha256" })
+            let package = response.assets.first(where: { $0.name == Self.packageAssetName }),
+            let checksum = response.assets.first(where: { $0.name == Self.checksumAssetName })
         else {
-            throw AppUpdateError.missingReleaseAsset("FileFoundry.app.zip and FileFoundry.app.zip.sha256")
+            throw AppUpdateError.missingReleaseAsset("\(Self.packageAssetName) and \(Self.checksumAssetName)")
         }
         guard
             response.htmlURL.scheme == "https",
@@ -61,21 +64,28 @@ public final class AppUpdateService: @unchecked Sendable {
         )
     }
 
-    public static func checksum(from data: Data) throws -> String {
+    /// Reads a `shasum -a 256` style file (`<sha256>  <filename>` per line) and returns the
+    /// digest listed for `fileName`. Throws if the file is malformed or has no entry for it.
+    public static func checksum(from data: Data, for fileName: String = AppUpdateService.packageAssetName) throws -> String {
         guard let text = String(data: data, encoding: .utf8) else {
             throw AppUpdateError.invalidChecksumFile
         }
 
-        guard let token = text.split(whereSeparator: \.isWhitespace).first else {
-            throw AppUpdateError.invalidChecksumFile
-        }
-
-        let checksum = String(token).lowercased()
         let hexCharacters = CharacterSet(charactersIn: "0123456789abcdef")
-        guard checksum.count == 64, checksum.unicodeScalars.allSatisfy({ hexCharacters.contains($0) }) else {
-            throw AppUpdateError.invalidChecksumFile
+        for line in text.split(whereSeparator: \.isNewline) {
+            let parts = line.split(maxSplits: 1, whereSeparator: \.isWhitespace)
+            guard parts.count == 2 else { continue }
+            var name = parts[1].trimmingCharacters(in: .whitespaces)
+            if name.hasPrefix("*") { name.removeFirst() }
+            guard name == fileName else { continue }
+
+            let digest = String(parts[0]).lowercased()
+            guard digest.count == 64, digest.unicodeScalars.allSatisfy({ hexCharacters.contains($0) }) else {
+                throw AppUpdateError.invalidChecksumFile
+            }
+            return digest
         }
-        return checksum
+        throw AppUpdateError.missingChecksumEntry(fileName)
     }
 
     public func latestRelease() async throws -> AppRelease {
@@ -99,7 +109,8 @@ public final class AppUpdateService: @unchecked Sendable {
         let stagingDirectory = fileManager.temporaryDirectory
             .appendingPathComponent("FileFoundryUpdate-\(UUID().uuidString)", isDirectory: true)
         let extractedDirectory = stagingDirectory.appendingPathComponent("Extracted", isDirectory: true)
-        let packageURL = stagingDirectory.appendingPathComponent("FileFoundry.app.zip")
+        let mountDirectory = stagingDirectory.appendingPathComponent("Mount", isDirectory: true)
+        let packageURL = stagingDirectory.appendingPathComponent(Self.packageAssetName)
 
         do {
             try fileManager.createDirectory(at: stagingDirectory, withIntermediateDirectories: true)
@@ -107,9 +118,8 @@ public final class AppUpdateService: @unchecked Sendable {
             try await download(release.packageURL, to: packageURL)
             let checksumData = try await data(from: release.checksumURL)
             try validatePackage(at: packageURL, checksumData: checksumData)
-            try unzip(packageURL, to: extractedDirectory)
 
-            let appBundleURL = try extractedAppBundle(in: extractedDirectory)
+            let appBundleURL = try copyAppBundle(fromDiskImage: packageURL, mountPoint: mountDirectory, to: extractedDirectory)
             try validateAppBundle(appBundleURL, expectedVersion: release.version)
             return StagedAppUpdate(
                 release: release,
@@ -123,7 +133,7 @@ public final class AppUpdateService: @unchecked Sendable {
     }
 
     public func validatePackage(at packageURL: URL, checksumData: Data) throws {
-        let expected = try Self.checksum(from: checksumData)
+        let expected = try Self.checksum(from: checksumData, for: Self.packageAssetName)
         let actual = try hashService.sha256(for: packageURL)
         guard expected == actual else {
             throw AppUpdateError.checksumMismatch(expected: expected, actual: actual)
@@ -179,29 +189,33 @@ public final class AppUpdateService: @unchecked Sendable {
         }
     }
 
-    private func unzip(_ packageURL: URL, to destinationURL: URL) throws {
+    /// Mounts the verified disk image read-only, copies FileFoundry.app out with ditto and always detaches.
+    private func copyAppBundle(fromDiskImage imageURL: URL, mountPoint: URL, to destinationDirectory: URL) throws -> URL {
+        try fileManager.createDirectory(at: mountPoint, withIntermediateDirectories: true)
+        try runProcess(
+            executableURL: URL(fileURLWithPath: "/usr/bin/hdiutil"),
+            arguments: ["attach", "-nobrowse", "-readonly", "-noautoopen", "-mountpoint", mountPoint.path, imageURL.path]
+        )
+        defer { detach(mountPoint) }
+
+        let sourceURL = mountPoint.appendingPathComponent("FileFoundry.app", isDirectory: true)
+        guard fileManager.fileExists(atPath: sourceURL.path) else {
+            throw AppUpdateError.invalidAppBundle("FileFoundry.app was not found in the disk image.")
+        }
+
+        let appBundleURL = destinationDirectory.appendingPathComponent("FileFoundry.app", isDirectory: true)
         try runProcess(
             executableURL: URL(fileURLWithPath: "/usr/bin/ditto"),
-            arguments: ["-x", "-k", packageURL.path, destinationURL.path]
+            arguments: [sourceURL.path, appBundleURL.path]
         )
+        return appBundleURL
     }
 
-    private func extractedAppBundle(in directory: URL) throws -> URL {
-        let directURL = directory.appendingPathComponent("FileFoundry.app", isDirectory: true)
-        if fileManager.fileExists(atPath: directURL.path) {
-            return directURL
+    private func detach(_ mountPoint: URL) {
+        let hdiutil = URL(fileURLWithPath: "/usr/bin/hdiutil")
+        if (try? runProcess(executableURL: hdiutil, arguments: ["detach", mountPoint.path])) == nil {
+            _ = try? runProcess(executableURL: hdiutil, arguments: ["detach", "-force", mountPoint.path])
         }
-
-        let contents = try fileManager.contentsOfDirectory(
-            at: directory,
-            includingPropertiesForKeys: nil,
-            options: [.skipsHiddenFiles]
-        )
-        if let appURL = contents.first(where: { $0.lastPathComponent == "FileFoundry.app" && $0.pathExtension == "app" }) {
-            return appURL
-        }
-
-        throw AppUpdateError.invalidAppBundle("FileFoundry.app was not found in the archive.")
     }
 
     private func validateAppBundle(_ appBundleURL: URL, expectedVersion: String) throws {
