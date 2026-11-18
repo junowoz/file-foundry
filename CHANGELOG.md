@@ -2,6 +2,18 @@
 
 All notable changes to File Foundry will be documented in this file.
 
+## [1.2.0] - 2026-11-18
+
+### Added
+
+- Transcribe: Meeting Scribe now lives inside File Foundry, with a one-time import of an existing Meeting Scribe library (APFS clone copy, paths rewritten) and its AssemblyAI key. Deleting can also move the original imported file to the Trash.
+- Second Screen: use an Android tablet or phone as an extra display over USB (adb) or Wi-Fi, with a virtual display, hardware encoding, pairing codes and an encrypted stream. Android app `FileFoundryScreen.apk` ships with the release.
+
+### Changed
+
+- Converter and Compressor are one module, Convert & Compress: drop one or many files, pick Compress or Convert per kind, and process them as a queue. Optional hardware encoding for quality mode, HEIC output.
+- Transcribe settings moved into a compact in-module sheet; the transcript action bar no longer stretches.
+
 ## [1.1.0] - 2026-11-17
 
 ### Added

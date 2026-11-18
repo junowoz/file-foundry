@@ -1,0 +1,4 @@
+module CVirtualDisplay {
+    header "CGVirtualDisplayBridge.h"
+    export *
+}

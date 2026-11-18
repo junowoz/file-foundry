@@ -6,7 +6,7 @@ APP_NAME="FileFoundry"
 UPDATER_NAME="FileFoundryUpdater"
 BUNDLE_ID="com.junowoz.filefoundry"
 UPDATER_BUNDLE_ID="com.junowoz.filefoundry.updater"
-VERSION="1.1.0"
+VERSION="1.2.0"
 MIN_SYSTEM_VERSION="14.0"
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -65,6 +65,18 @@ cat >"$INFO_PLIST" <<PLIST
   <key>LSArchitecturePriority</key>
   <array>
     <string>arm64</string>
+  </array>
+  <key>NSMicrophoneUsageDescription</key>
+  <string>File Foundry uses the microphone to record your voice in meetings you choose to transcribe.</string>
+  <key>NSAudioCaptureUsageDescription</key>
+  <string>File Foundry captures audio played by other apps when you record a meeting.</string>
+  <key>NSScreenCaptureUsageDescription</key>
+  <string>File Foundry captures the screen to record meetings and to stream the extended display to your tablet.</string>
+  <key>NSLocalNetworkUsageDescription</key>
+  <string>File Foundry finds your paired tablet on the local network for Second Screen.</string>
+  <key>NSBonjourServices</key>
+  <array>
+    <string>_ffscreen._tcp</string>
   </array>
   <key>NSHighResolutionCapable</key>
   <true/>

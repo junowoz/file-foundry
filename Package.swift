@@ -17,9 +17,14 @@ let package = Package(
             name: "FileFoundryCore",
             path: "FileFoundryCore"
         ),
+        .target(
+            name: "CVirtualDisplay",
+            path: "CVirtualDisplay",
+            publicHeadersPath: "include"
+        ),
         .executableTarget(
             name: "FileFoundry",
-            dependencies: ["FileFoundryCore"],
+            dependencies: ["FileFoundryCore", "CVirtualDisplay"],
             path: "FileFoundryApp",
             exclude: [
                 "Resources"

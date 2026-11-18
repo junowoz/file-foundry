@@ -76,9 +76,159 @@ final class CompressorTests: XCTestCase {
         XCTAssertEqual(try MediaProbe.parse(Data(#"{"streams":[],"format":{}}"#.utf8)).kind, .other)
     }
 
+    func testHardwareQualityUsesVideoToolbox() {
+        var info = MediaInfo(); info.kind = .video; info.duration = 10; info.width = 1280; info.height = 720
+        let request = CompressionRequest(
+            info: info, originalBytes: 10_000_000, mode: .quality, targetBytes: 0, codec: .hevc, preset: .balanced,
+            image: ImageSettings(), hardware: true)
+        let plan = CompressionPlanner.make(request: request, input: URL(fileURLWithPath: "/tmp/a.mov"), output: URL(fileURLWithPath: "/tmp/b.mp4"), passLog: "/tmp/p")
+        let args = plan.steps[0].arguments
+        XCTAssertTrue(args.contains("hevc_videotoolbox"))
+        XCTAssertFalse(args.contains("libx265"))
+        XCTAssertEqual(plan.steps.count, 1)
+        // Target size stays two-pass software even when hardware is requested.
+        var target = request; target.mode = .targetSize; target.targetBytes = 2_000_000
+        let two = CompressionPlanner.make(request: target, input: URL(fileURLWithPath: "/tmp/a.mov"), output: URL(fileURLWithPath: "/tmp/b.mp4"), passLog: "/tmp/p")
+        XCTAssertEqual(two.steps.count, 2)
+        XCTAssertTrue(two.steps[1].arguments.contains("libx265"))
+    }
+
     func testOutputSafetyRefusesInput() {
         let url = URL(fileURLWithPath: "/tmp/a.mp4")
         XCTAssertThrowsError(try OutputSafety.validate(input: url, output: url))
+    }
+
+    func testOutputSafetyRefusesZipInsideFolder() throws {
+        let dir = try PrivateTemp.make()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        XCTAssertThrowsError(try OutputSafety.validate(input: dir, output: dir.appendingPathComponent("inside.zip")))
+    }
+
+    func testOutputSafetyIsCaseInsensitiveAndResolvesSymlinks() throws {
+        let dir = try PrivateTemp.make()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let folder = dir.appendingPathComponent("Docs")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let alias = dir.appendingPathComponent("alias")
+        try FileManager.default.createSymbolicLink(at: alias, withDestinationURL: folder)
+        // Different case of the archived folder, and a symlinked parent that resolves into it.
+        XCTAssertThrowsError(try OutputSafety.validate(input: folder, output: dir.appendingPathComponent("DOCS/out.zip")))
+        XCTAssertThrowsError(try OutputSafety.validate(input: folder, output: alias.appendingPathComponent("out.zip")))
+        XCTAssertThrowsError(try OutputSafety.validate(input: folder, output: dir.appendingPathComponent("docs")))
+        XCTAssertNoThrow(try OutputSafety.validate(input: folder, output: dir.appendingPathComponent("Docs2.zip")))
+        XCTAssertNoThrow(try OutputSafety.validate(input: folder, output: dir.appendingPathComponent("Docs.zip")))
+    }
+
+    func testPublishMovesStagedFileAndNeverReplacesExistingDestination() throws {
+        let dir = try PrivateTemp.make()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let staged = dir.appendingPathComponent("staged.bin")
+        try Data("new".utf8).write(to: staged)
+        let destination = dir.appendingPathComponent("clip (compressed).mp4")
+        try Data("precious".utf8).write(to: destination)
+        try Data("second".utf8).write(to: dir.appendingPathComponent("clip (compressed) 2.mp4"))
+
+        let published = try OutputPublisher.publish(staged: staged, to: destination)
+        XCTAssertEqual(published.lastPathComponent, "clip (compressed) 3.mp4")
+        XCTAssertEqual(try String(contentsOf: destination, encoding: .utf8), "precious")
+        XCTAssertEqual(try String(contentsOf: published, encoding: .utf8), "new")
+        XCTAssertFalse(FileManager.default.fileExists(atPath: staged.path))
+        // A dangling symlink at the destination is also "taken", not followed.
+        let staged2 = dir.appendingPathComponent("staged2.bin")
+        try Data("n2".utf8).write(to: staged2)
+        let trap = dir.appendingPathComponent("trap.mp4")
+        try FileManager.default.createSymbolicLink(at: trap, withDestinationURL: dir.appendingPathComponent("nowhere"))
+        XCTAssertEqual(try OutputPublisher.publish(staged: staged2, to: trap).lastPathComponent, "trap 2.mp4")
+        XCTAssertFalse(FileManager.default.fileExists(atPath: dir.appendingPathComponent("nowhere").path))
+    }
+
+    func testRunnerPublishesZipFromTempAndKeepsExistingDestination() async throws {
+        let dir = try PrivateTemp.make()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let input = dir.appendingPathComponent("note.txt")
+        try Data("hello".utf8).write(to: input)
+        let output = dir.appendingPathComponent("note.txt (compressed).zip")
+        try Data("precious".utf8).write(to: output)
+        let work = try PrivateTemp.make()
+        let result = try await MediaRunner.run(
+            plan: CompressionPlanner.zip(), originalBytes: 5, input: input, output: output, tempDir: work, handle: ProcessHandle()) { _ in }
+        XCTAssertEqual(try String(contentsOf: output, encoding: .utf8), "precious")
+        XCTAssertEqual(result.outputURL.lastPathComponent, "note.txt (compressed) 2.zip")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: result.outputURL.path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: work.path))
+    }
+
+    func testFailedRunLeavesUserFolderUntouched() async throws {
+        let dir = try PrivateTemp.make()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let input = dir.appendingPathComponent("missing-folder")
+        let output = dir.appendingPathComponent("out.zip")
+        let work = try PrivateTemp.make()
+        do {
+            _ = try await MediaRunner.run(
+                plan: CompressionPlanner.zip(), originalBytes: 0, input: input, output: output, tempDir: work, handle: ProcessHandle()) { _ in }
+            XCTFail("ditto must fail for a missing input")
+        } catch {}
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: dir.path).sorted(), [])
+        XCTAssertFalse(FileManager.default.fileExists(atPath: work.path))
+    }
+
+    func testEveryFFmpegInputIsPrecededByProtocolWhitelist() {
+        var info = MediaInfo(); info.kind = .video; info.duration = 10; info.width = 1280; info.height = 720; info.audioCodec = "aac"
+        let input = URL(fileURLWithPath: "/tmp/a:b.mov"), output = URL(fileURLWithPath: "/tmp/b.mp4")
+        var plans: [CompressionPlan] = []
+        for mode in [CompressionMode.targetSize, .quality] {
+            for hardware in [false, true] {
+                let request = CompressionRequest(info: info, originalBytes: 10_000_000, mode: mode, targetBytes: 2_000_000, codec: .h264,
+                                                 preset: .balanced, image: ImageSettings(), hardware: hardware)
+                plans.append(CompressionPlanner.make(request: request, input: input, output: output, passLog: "/tmp/p"))
+            }
+        }
+        var audio = info; audio.kind = .audio
+        plans.append(CompressionPlanner.make(request: CompressionRequest(info: audio, originalBytes: 1_000_000, mode: .quality, targetBytes: 0, codec: .h264, preset: .balanced, image: ImageSettings()), input: input, output: output, passLog: "/tmp/p"))
+        var image = info; image.kind = .image
+        plans.append(CompressionPlanner.make(request: CompressionRequest(info: image, originalBytes: 1_000_000, mode: .quality, targetBytes: 0, codec: .h264, preset: .balanced, image: ImageSettings()), input: input, output: output, passLog: "/tmp/p"))
+        var argumentLists = plans.flatMap { $0.steps.map(\.arguments) }
+        argumentLists.append(CompressionPlanner.imageArguments(input: input, output: output, settings: ImageSettings(), quality: 50))
+        for preset in ConverterPreset.allCases where !preset.usesSips {
+            argumentLists.append(ConversionPlanner.make(preset: preset, info: info, input: input, output: output).steps[0].arguments)
+        }
+        XCTAssertGreaterThan(argumentLists.count, 10)
+        for args in argumentLists {
+            let positions = args.indices.filter { args[$0] == "-i" }
+            XCTAssertEqual(positions.count, 1, "\(args)")
+            for i in positions {
+                XCTAssertGreaterThanOrEqual(i, 2)
+                XCTAssertEqual(Array(args[(i - 2)..<i]), ["-protocol_whitelist", "file,pipe"], "\(args)")
+                XCTAssertEqual(args[i + 1], "/tmp/a:b.mov", "input must be an absolute path")
+            }
+        }
+    }
+
+    func testFFprobeArgumentsWhitelistProtocolsAndEndOptions() {
+        let args = MediaProbe.probeArguments(for: URL(fileURLWithPath: "/tmp/-weird.mov"))
+        let whitelist = try? XCTUnwrap(args.firstIndex(of: "-protocol_whitelist"))
+        XCTAssertEqual(args[(whitelist ?? 0) + 1], "file,pipe")
+        XCTAssertLessThan(whitelist ?? .max, args.firstIndex(of: "--") ?? 0)
+        XCTAssertEqual(args.last, "/tmp/-weird.mov")
+        XCTAssertEqual(args[args.count - 2], "--")
+    }
+
+    func testEncoderCapabilitiesParse() {
+        let text = """
+        Encoders:
+         V..... = Video
+         ------
+         V....D libx264              libx264 H.264
+         V....D h264_videotoolbox    VideoToolbox H.264 Encoder
+         A....D libopus              libopus Opus
+        """
+        let caps = EncoderCapabilities.parse(text)
+        XCTAssertTrue(caps.has("libx264"))
+        XCTAssertTrue(caps.hardwareH264)
+        XCTAssertFalse(caps.hardwareHEVC)
+        XCTAssertFalse(caps.has("libwebp"))
+        XCTAssertTrue(EncoderCapabilities().has("libwebp"), "unknown capabilities must not hide options")
     }
 
     func testEndToEndTargetSize() async throws {
@@ -95,17 +245,17 @@ final class CompressorTests: XCTestCase {
 
         let info = await MediaProbe.probe(input)
         XCTAssertEqual(info.kind, .video)
-        let original = CompressorService.fileSize(input)
+        let original = MediaRunner.fileSize(input)
         let target = 2_000_000
         let request = CompressionRequest(
             info: info, originalBytes: original, mode: .targetSize, targetBytes: target, codec: .h264,
             preset: .balanced, image: ImageSettings())
         let work = try PrivateTemp.make()
         let output = dir.appendingPathComponent("ff-test (compressed).mp4")
-        let plan = CompressionPlanner.make(request: request, input: input, output: output, passLog: work.appendingPathComponent("pass").path)
+        let plan = CompressionPlanner.make(request: request, input: input, output: MediaRunner.stagedURL(tempDir: work, ext: "mp4"), passLog: work.appendingPathComponent("pass").path)
         XCTAssertNil(plan.problem)
-        let result = try await CompressorService.run(
-            plan: plan, request: request, input: input, output: output, tempDir: work, handle: ProcessHandle()) { _ in }
+        let result = try await MediaRunner.run(
+            plan: plan, originalBytes: original, input: input, output: output, tempDir: work, handle: ProcessHandle()) { _ in }
         print("E2E input=\(original) target=\(target) output=\(result.newBytes) summary=\(plan.summary)")
         XCTAssertLessThanOrEqual(result.newBytes, target)
         XCTAssertFalse(FileManager.default.fileExists(atPath: work.path), "temp dir must be removed")

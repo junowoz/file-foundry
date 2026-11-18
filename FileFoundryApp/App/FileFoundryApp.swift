@@ -26,6 +26,7 @@ struct FileFoundryApp: App {
             SettingsView(mediaStore: mediaStore)
         }
         .commands {
+            TranscribeCommands()
             CommandGroup(replacing: .help) {
                 Button("File Foundry Help") {
                     NSWorkspace.shared.open(AppMetadata.repositoryURL)
