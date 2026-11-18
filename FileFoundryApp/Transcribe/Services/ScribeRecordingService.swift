@@ -146,11 +146,11 @@ final class ScribeRecordingService: NSObject, @unchecked Sendable {
         case permissionDenied, noDisplay, noMicrophone, notRecording, noAudio
         var errorDescription: String? {
             switch self {
-            case .permissionDenied: "Permita Gravação de Tela e Microfone em Ajustes do Sistema > Privacidade e Segurança. Pode ser necessário reabrir o app."
-            case .noDisplay: "Nenhuma tela disponível para gravação."
-            case .noMicrophone: "Nenhum microfone disponível."
-            case .notRecording: "Não há gravação em andamento."
-            case .noAudio: "A gravação terminou sem áudio utilizável."
+            case .permissionDenied: "Allow Screen Recording and Microphone access in System Settings > Privacy & Security. You may need to reopen the app."
+            case .noDisplay: "No display is available for recording."
+            case .noMicrophone: "No microphone is available."
+            case .notRecording: "No recording is in progress."
+            case .noAudio: "The recording ended without usable audio."
             }
         }
     }

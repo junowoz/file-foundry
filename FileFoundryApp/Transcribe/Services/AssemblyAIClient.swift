@@ -89,7 +89,7 @@ struct AssemblyAIClient {
             await onStatus(result.status)
             switch result.status {
             case "completed": return CompletedTranscript(result: result, rawData: data)
-            case "error": throw ClientError.api(result.error ?? "A transcrição falhou sem detalhes.")
+            case "error": throw ClientError.api(result.error ?? "The transcript failed without details.")
             default: try await Task.sleep(for: .seconds(4))
             }
         }
@@ -157,21 +157,21 @@ struct AssemblyAIClient {
     static func errorMessage(statusCode: Int, data: Data) -> String {
         let body = String(decoding: data, as: UTF8.self).lowercased()
         if body.contains("does not have access to this llm") {
-            return "Sua conta AssemblyAI não tem acesso ao modelo de resumo. A transcrição continua disponível. Ative o acesso ao LLM Gateway na AssemblyAI e tente gerar o resumo novamente."
+            return "Your AssemblyAI account doesn't have access to the summary model. The transcript is still available. Turn on LLM Gateway access in AssemblyAI, then try generating the summary again."
         }
         switch statusCode {
         case 401, 403:
-            return "A AssemblyAI recusou o acesso. Confira a API key e a região em Ajustes e tente novamente."
+            return "AssemblyAI denied access. Check the API key and region in Settings, then try again."
         case 402:
-            return "A AssemblyAI precisa de saldo para continuar. Confira o faturamento da sua conta e tente novamente."
+            return "AssemblyAI needs a credit balance to continue. Check billing for your account, then try again."
         case 429:
-            return "A AssemblyAI atingiu o limite de solicitações. Aguarde alguns minutos e tente novamente."
+            return "AssemblyAI hit its request limit. Wait a few minutes, then try again."
         case 500...599:
-            return "A AssemblyAI está indisponível no momento. Tente novamente em alguns minutos."
+            return "AssemblyAI is unavailable right now. Try again in a few minutes."
         case 404:
-            return "A transcrição não está mais disponível na AssemblyAI. Importe o arquivo novamente para criar outra transcrição."
+            return "This transcript is no longer available in AssemblyAI. Import the file again to create a new transcript."
         default:
-            return "A AssemblyAI não aceitou a solicitação (HTTP \(statusCode)). Confira o formato do arquivo e as opções de transcrição em Ajustes."
+            return "AssemblyAI didn't accept the request (HTTP \(statusCode)). Check the file format and transcription options in Settings."
         }
     }
 
@@ -179,7 +179,7 @@ struct AssemblyAIClient {
         case invalidResponse, api(String)
         var errorDescription: String? {
             switch self {
-            case .invalidResponse: "Resposta inválida da AssemblyAI."
+            case .invalidResponse: "AssemblyAI sent an invalid response."
             case .api(let message): message
             }
         }

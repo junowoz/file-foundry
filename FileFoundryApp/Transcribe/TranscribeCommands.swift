@@ -11,10 +11,10 @@ struct TranscribeCommands: Commands {
     @ObservedObject private var store = TranscribeStore.shared
 
     var body: some Commands {
-        CommandMenu("Transcrição") {
-            Button("Importar mídia…") { NotificationCenter.default.post(name: .transcribeImportMedia, object: nil) }
+        CommandMenu("Transcribe") {
+            Button("Import Media…") { NotificationCenter.default.post(name: .transcribeImportMedia, object: nil) }
                 .keyboardShortcut("o")
-            Button(store.isRecording ? "Encerrar gravação" : "Nova gravação") {
+            Button(store.isRecording ? "Stop Recording" : "New Recording") {
                 if store.isRecording { store.stopRecording() }
                 else { NotificationCenter.default.post(name: .transcribeNewRecording, object: nil) }
             }

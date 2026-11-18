@@ -21,7 +21,7 @@ enum SpeechModelChoice: String, Codable, CaseIterable, Identifiable {
     var id: String { rawValue }
     var title: String {
         switch self {
-        case .bestWithFallback: "Melhor disponível + fallback"
+        case .bestWithFallback: "Best available + fallback"
         case .universal35Pro: "Universal-3.5 Pro"
         case .universal2: "Universal-2"
         }
@@ -39,14 +39,14 @@ enum AudioTagsChoice: String, Codable, CaseIterable, Identifiable {
     case removeAll = "all"
     case keepEvents = "speaker"
     var id: String { rawValue }
-    var title: String { self == .removeAll ? "Texto limpo" : "Manter eventos de áudio" }
+    var title: String { self == .removeAll ? "Clean text" : "Keep audio events" }
 }
 
 enum PIISubstitution: String, Codable, CaseIterable, Identifiable {
     case entityName = "entity_name"
     case hash
     var id: String { rawValue }
-    var title: String { self == .entityName ? "Nome da entidade" : "Hash" }
+    var title: String { self == .entityName ? "Entity name" : "Hash" }
 }
 
 struct TranscriptionSettings: Codable, Equatable {

@@ -21,45 +21,45 @@ struct ScribeMeetingDetailView: View {
             header
             if meeting.status == .failed, !meeting.text.isEmpty {
                 HStack {
-                    Label(meeting.errorMessage ?? "O texto foi preservado. Tente concluir novamente.", systemImage: "exclamationmark.triangle")
+                    Label(meeting.errorMessage ?? "The text was kept. Try finishing again.", systemImage: "exclamationmark.triangle")
                     Spacer()
-                    Button("Tentar concluir") { store.retry(meeting) }.disabled(store.isBusy || store.isRecording)
-                }.padding(16).background(.quaternary)
+                    Button("Try Again") { store.retry(meeting) }.disabled(store.isBusy || store.isRecording)
+                }.padding(RackLayout.l).background(.quaternary)
             }
             if !meeting.text.isEmpty || meeting.status == .completed {
-                HStack(spacing: 16) {
-                    Picker("Conteúdo", selection: $tab) {
-                        Text("Transcrição").tag(0)
-                        Text("Resumo").tag(1)
-                        Text("Palavras").tag(2)
+                HStack(spacing: RackLayout.l) {
+                    Picker("Content", selection: $tab) {
+                        Text("Transcript").tag(0)
+                        Text("Summary").tag(1)
+                        Text("Words").tag(2)
                     }.pickerStyle(.segmented).labelsHidden().frame(maxWidth: 350)
                     Spacer()
                     Menu {
-                        Button("Texto menor") { textSize = max(13, textSize - 1) }
-                        Button("Texto maior") { textSize = min(24, textSize + 1) }
-                        Button("Tamanho padrão") { textSize = 16 }
-                    } label: { Label("Tamanho do texto", systemImage: "textformat.size") }
-                        .labelStyle(.iconOnly).accessibilityLabel("Tamanho do texto")
-                        .menuStyle(.borderlessButton).fixedSize().help("Ajustar tamanho da leitura")
-                }.padding(.horizontal, 24).padding(.vertical, 16)
+                        Button("Smaller Text") { textSize = max(13, textSize - 1) }
+                        Button("Larger Text") { textSize = min(24, textSize + 1) }
+                        Button("Default Size") { textSize = 16 }
+                    } label: { Label("Text Size", systemImage: "textformat.size") }
+                        .labelStyle(.iconOnly).accessibilityLabel("Text Size")
+                        .menuStyle(.borderlessButton).fixedSize().help("Adjust reading size")
+                }.padding(.horizontal, RackLayout.xl).padding(.vertical, RackLayout.l)
                 if showPlayer, let player {
-                    VideoPlayer(player: player).frame(height: 160).padding(.horizontal, 24)
+                    VideoPlayer(player: player).frame(height: 160).padding(.horizontal, RackLayout.xl)
                         .onReceive(player.currentItem!.publisher(for: \.status)) { status in playbackError = status == .failed }
                     if playbackError {
                         HStack {
-                            Text("O macOS não reproduz este formato. A transcrição continua disponível.")
-                            Button("Abrir no Finder") { store.reveal(meeting) }
-                        }.font(.callout).padding(.horizontal, 24)
+                            Text("macOS can't play this format. The transcript is still available.")
+                            Button("Show in Finder") { store.reveal(meeting) }
+                        }.font(.callout).padding(.horizontal, RackLayout.xl)
                     }
                 }
                 if tab == 0 {
                     HStack {
                         Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-                        TextField("Buscar nesta transcrição", text: $query)
-                            .textFieldStyle(.plain).accessibilityLabel("Buscar nesta transcrição")
-                        if !query.isEmpty { Button("Limpar") { query = "" }.buttonStyle(.borderless) }
-                    }.padding(10).background(.quaternary, in: RoundedRectangle(cornerRadius: 8))
-                        .padding(.horizontal, 24).padding(.bottom, 8)
+                        TextField("Search this transcript", text: $query)
+                            .textFieldStyle(.plain).accessibilityLabel("Search this transcript")
+                        if !query.isEmpty { Button("Clear") { query = "" }.buttonStyle(.borderless) }
+                    }.padding(RackLayout.s).background(.quaternary, in: RoundedRectangle(cornerRadius: RackLayout.cornerRadius))
+                        .padding(.horizontal, RackLayout.xl).padding(.bottom, RackLayout.s)
                     transcript
                 } else if tab == 1 { summary }
                 else { words }
@@ -67,16 +67,16 @@ struct ScribeMeetingDetailView: View {
         }
         .background(Color(nsColor: .textBackgroundColor))
         .sheet(isPresented: $showRename) {
-            VStack(alignment: .leading, spacing: 20) {
-                Text("Renomear transcrição").font(.title2.bold())
-                TextField("Título", text: $title).textFieldStyle(.roundedBorder)
+            VStack(alignment: .leading, spacing: RackLayout.l) {
+                Text("Rename Transcript").font(.title2.bold())
+                TextField("Title", text: $title).textFieldStyle(.roundedBorder)
                 HStack {
-                    Button("Cancelar") { showRename = false }.keyboardShortcut(.cancelAction)
+                    Button("Cancel") { showRename = false }.keyboardShortcut(.cancelAction)
                     Spacer()
-                    Button("Salvar título") { store.rename(meeting, title: title); showRename = false }
+                    Button("Save Title") { store.rename(meeting, title: title); showRename = false }
                         .keyboardShortcut(.defaultAction)
                 }
-            }.padding(28).frame(width: 460)
+            }.padding(RackLayout.xl).frame(width: 460)
         }
         .onDisappear { player?.pause() }
     }
@@ -84,29 +84,29 @@ struct ScribeMeetingDetailView: View {
     private var isProcessing: Bool { !store.canDelete(meeting) }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: RackLayout.l) {
+            VStack(alignment: .leading, spacing: RackLayout.s) {
                 Text(meeting.title).font(.title2.weight(.semibold)).textSelection(.enabled)
                     .fixedSize(horizontal: false, vertical: true).accessibilityAddTraits(.isHeader)
-                HStack(spacing: 12) {
+                HStack(spacing: RackLayout.m) {
                     Text(meeting.createdAt, style: .date)
                     Label(ScribeFormatters.duration(meeting.durationSeconds), systemImage: "clock").monospacedDigit()
-                    Label(meeting.status.rawValue, systemImage: statusSymbol)
+                    Label(meeting.status.displayName, systemImage: statusSymbol)
                         .foregroundStyle(meeting.status == .failed ? Color.red : Color.secondary)
                 }.font(.callout).foregroundStyle(.secondary)
                 if TranscribeStore.isInFlight(meeting.status) {
-                    VStack(alignment: .leading, spacing: 6) {
+                    VStack(alignment: .leading, spacing: RackLayout.s) {
                         ProgressView(value: min(max(meeting.progress, 0), 1))
-                        Text("\(meeting.status.rawValue) · \(Int((meeting.progress * 100).rounded()))%")
+                        Text("\(meeting.status.displayName) · \(Int((meeting.progress * 100).rounded()))%")
                             .font(.caption).foregroundStyle(.secondary).monospacedDigit()
                     }.frame(maxWidth: 360)
                 }
             }
             ViewThatFits(in: .horizontal) {
-                HStack(spacing: 8) { actions(compact: false) }
-                HStack(spacing: 8) { actions(compact: true) }
+                HStack(spacing: RackLayout.s) { actions(compact: false) }
+                HStack(spacing: RackLayout.s) { actions(compact: true) }
             }.frame(maxWidth: .infinity, alignment: .leading)
-        }.padding(24).frame(maxWidth: .infinity, alignment: .leading).background(.bar)
+        }.padding(RackLayout.xl).frame(maxWidth: .infinity, alignment: .leading).background(.bar)
     }
 
     private var statusSymbol: String {
@@ -124,37 +124,37 @@ struct ScribeMeetingDetailView: View {
                 Button(format.title) { export(format) }
                     .disabled((format == .srt || format == .vtt) && !ScribeExportService.hasTimedTranscript(meeting))
             }
-        } label: { actionLabel("Exportar", "square.and.arrow.up", compact) }
+        } label: { actionLabel("Export", "square.and.arrow.up", compact) }
             .menuStyle(.button).menuIndicator(.hidden).buttonStyle(.bordered).fixedSize()
-            .disabled(meeting.text.isEmpty).help("Exportar transcrição")
+            .disabled(meeting.text.isEmpty).help("Export transcript")
         Button {
             NSPasteboard.general.clearContents()
             NSPasteboard.general.setString(ScribeExportService.transcriptText(meeting), forType: .string)
             copied = true
-        } label: { actionLabel(copied ? "Copiado" : "Copiar texto", copied ? "checkmark" : "doc.on.doc", compact) }
+        } label: { actionLabel(copied ? "Copied" : "Copy Text", copied ? "checkmark" : "doc.on.doc", compact) }
             .buttonStyle(.bordered).fixedSize()
-            .disabled(meeting.text.isEmpty).help("Copiar texto da transcrição")
+            .disabled(meeting.text.isEmpty).help("Copy transcript text")
         Menu {
-            Button(showPlayer ? "Ocultar mídia" : "Ouvir mídia") {
+            Button(showPlayer ? "Hide Media" : "Play Media") {
                 if player == nil { player = AVPlayer(url: URL(filePath: meeting.sourcePath)) }
                 showPlayer.toggle()
                 if !showPlayer { player?.pause() }
             }.disabled(!FileManager.default.fileExists(atPath: meeting.sourcePath))
-            Button("Renomear…") { title = meeting.title; showRename = true }
-            Button("Mostrar arquivos no Finder") { store.reveal(meeting) }
-        } label: { actionLabel("Mais", "ellipsis", compact) }
+            Button("Rename…") { title = meeting.title; showRename = true }
+            Button("Show Files in Finder") { store.reveal(meeting) }
+        } label: { actionLabel("More", "ellipsis", compact) }
             .menuStyle(.button).menuIndicator(.hidden).buttonStyle(.bordered).fixedSize()
-            .help("Mais ações")
-        Spacer(minLength: 8)
-        Button(role: .destructive) { confirmDelete() } label: { actionLabel("Excluir", "trash", compact) }
+            .help("More actions")
+        Spacer(minLength: RackLayout.s)
+        Button(role: .destructive) { confirmDelete() } label: { actionLabel("Move to Trash", "trash", compact) }
             .buttonStyle(.bordered).fixedSize()
             .disabled(isProcessing)
-            .help(isProcessing ? "Em processamento: cancele para excluir" : "Mover esta transcrição para o Lixo")
+            .help(isProcessing ? "In progress. Cancel first to move it to the Trash." : "Move this transcript to the Trash")
     }
 
     private func confirmDelete() {
         let id = meeting.id
-        ScribeDeleteConfirmation.present(title: "Excluir “\(meeting.title)”?") { alsoOriginals in
+        ScribeDeleteConfirmation.present(title: "Move “\(meeting.title)” to Trash?") { alsoOriginals in
             store.remove(ids: [id], alsoTrashOriginals: alsoOriginals)
         }
     }
@@ -166,7 +166,7 @@ struct ScribeMeetingDetailView: View {
 
     private var transcript: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 24) {
+            LazyVStack(alignment: .leading, spacing: RackLayout.xl) {
                 if meeting.utterances.isEmpty {
                     if query.isEmpty || meeting.text.localizedCaseInsensitiveContains(query) {
                         Text(meeting.text).textSelection(.enabled)
@@ -175,9 +175,9 @@ struct ScribeMeetingDetailView: View {
                     let matches = meeting.utterances.filter { query.isEmpty || $0.text.localizedCaseInsensitiveContains(query) || $0.speaker.localizedCaseInsensitiveContains(query) }
                     if matches.isEmpty { noResults }
                     ForEach(matches) { utterance in
-                        VStack(alignment: .leading, spacing: 8) {
+                        VStack(alignment: .leading, spacing: RackLayout.s) {
                             HStack {
-                                Label("Pessoa \(utterance.speaker)", systemImage: "person.crop.circle")
+                                Label("Speaker \(utterance.speaker)", systemImage: "person.crop.circle")
                                     .font(.callout.weight(.semibold))
                                 Text(ScribeFormatters.timestamp(utterance.start)).font(.caption.monospacedDigit()).foregroundStyle(.secondary)
                             }
@@ -186,76 +186,77 @@ struct ScribeMeetingDetailView: View {
                     }
                 }
             }.font(.system(size: textSize)).lineSpacing(6)
-                .frame(maxWidth: 740, alignment: .leading).padding(28).frame(maxWidth: .infinity)
+                .frame(maxWidth: 740, alignment: .leading).padding(RackLayout.xl).frame(maxWidth: .infinity)
         }
     }
 
     private var noResults: some View {
-        ContentUnavailableView("Nenhum trecho encontrado", systemImage: "magnifyingglass", description: Text("Tente outra palavra ou limpe a busca para ver a transcrição completa."))
+        ContentUnavailableView("No matches found", systemImage: "magnifyingglass", description: Text("Try another word, or clear the search to see the full transcript."))
     }
 
     private var summary: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: RackLayout.l) {
                 if let error = meeting.summaryError {
-                    Label("A transcrição está salva. O resumo não ficou pronto.", systemImage: "exclamationmark.bubble")
+                    Label("The transcript is saved. The summary isn't ready.", systemImage: "exclamationmark.bubble")
                         .font(.headline)
                     Text(error).foregroundStyle(.secondary)
-                    Button("Tentar gerar resumo novamente") { store.retrySummary(meeting) }
+                    Button("Try Summary Again") { store.retrySummary(meeting) }
                         .disabled(store.isBusy || store.isRecording)
                 } else if let summary = meeting.summary, !summary.isEmpty {
                     Text(LocalizedStringKey(summary)).textSelection(.enabled)
                 } else {
-                    Label("Nenhum resumo gerado", systemImage: "text.alignleft").font(.headline)
-                    Text("Gere um resumo com decisões e tarefas usando sua conta AssemblyAI. Esse recurso depende do acesso ao modelo de resumo.").foregroundStyle(.secondary)
-                    Button("Gerar resumo") { store.retrySummary(meeting) }
+                    Label("No summary yet", systemImage: "text.alignleft").font(.headline)
+                    Text("Generate a summary with decisions and action items using your AssemblyAI account. This feature requires access to the summary model.").foregroundStyle(.secondary)
+                    Button("Generate Summary") { store.retrySummary(meeting) }
                         .disabled(store.isBusy || store.isRecording)
                 }
             }.font(.system(size: textSize)).lineSpacing(6)
-                .frame(maxWidth: 740, alignment: .leading).padding(28).frame(maxWidth: .infinity, alignment: .center)
+                .frame(maxWidth: 740, alignment: .leading).padding(RackLayout.xl).frame(maxWidth: .infinity, alignment: .center)
         }
     }
 
     private var words: some View {
         Table(meeting.words) {
-            TableColumn("Tempo") { Text(ScribeFormatters.timestamp($0.start)).monospacedDigit() }.width(80)
-            TableColumn("Pessoa") { Text($0.speaker ?? "Não identificada") }.width(100)
-            TableColumn("Palavra") { Text($0.text).textSelection(.enabled) }
-            TableColumn("Confiança") { word in
+            TableColumn("Time") { Text(ScribeFormatters.timestamp($0.start)).monospacedDigit() }.width(80)
+            TableColumn("Speaker") { Text($0.speaker ?? "Unidentified") }.width(100)
+            TableColumn("Word") { Text($0.text).textSelection(.enabled) }
+            TableColumn("Confidence") { word in
                 Text(word.confidence, format: .percent.precision(.fractionLength(1))).monospacedDigit()
             }.width(90)
         }.overlay {
-            if meeting.words.isEmpty { ContentUnavailableView("Sem detalhes por palavra", systemImage: "textformat.abc", description: Text("O texto completo continua disponível na aba Transcrição.")) }
+            if meeting.words.isEmpty { ContentUnavailableView("No word details", systemImage: "textformat.abc", description: Text("The full text is still available on the Transcript tab.")) }
         }
     }
 
     private var processing: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: RackLayout.l) {
             if meeting.status == .failed {
                 Image(systemName: "exclamationmark.triangle").font(.system(size: 36))
-                Text("Não foi possível concluir").font(.title2.bold())
-                Text(meeting.errorMessage ?? "Tente novamente ou confira sua conexão e a API key nos Ajustes.")
+                Text("Couldn't finish").font(.title2.bold())
+                Text(meeting.errorMessage ?? "Try again, or check your connection and API key in Settings.")
                     .foregroundStyle(.secondary).multilineTextAlignment(.center).frame(maxWidth: 480)
-                Button("Tentar novamente") { store.retry(meeting) }
+                Button("Try Again") { store.retry(meeting) }
                     .buttonStyle(.borderedProminent).disabled(store.isBusy || store.isRecording)
             } else {
                 ProgressView(value: meeting.progress).frame(maxWidth: 300)
-                Text(meeting.status.rawValue).font(.title3.bold())
-                Text("Você pode continuar consultando a biblioteca enquanto aguarda.")
+                Text(meeting.status.displayName).font(.title3.bold())
+                Text("You can keep browsing the library while you wait.")
                     .foregroundStyle(.secondary).multilineTextAlignment(.center)
             }
-        }.padding(32).frame(maxWidth: .infinity, maxHeight: .infinity)
+        }.padding(RackLayout.xxl).frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private func export(_ format: ScribeExportService.Format) {
         let panel = NSSavePanel()
-        panel.title = "Exportar transcrição"
+        panel.title = "Export Transcript"
         panel.nameFieldStringValue = ScribeExportService.suggestedFilename(meeting: meeting, format: format)
         panel.canCreateDirectories = true
         panel.allowedContentTypes = [format.contentType]
-        if panel.runModal() == .OK, let url = panel.url {
+        panel.presentAsSheet { ok in
+            guard ok, let url = panel.url else { return }
             do { try ScribeExportService.export(meeting: meeting, format: format, to: url) }
-            catch { store.alertMessage = "Não foi possível exportar. Escolha outra pasta e tente novamente. \(error.localizedDescription)" }
+            catch { store.alertMessage = "Couldn't export. Choose another folder and try again. \(error.localizedDescription)" }
         }
     }
 }

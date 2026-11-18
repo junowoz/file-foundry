@@ -8,17 +8,17 @@ struct TranscribeSettingsView: View {
     @State private var legacy: TranscribeStore.LegacyOffer?
 
     enum Page: String, CaseIterable, Identifiable {
-        case account = "Conta", transcription = "Transcrição", advanced = "Avançado"
+        case account = "Account", transcription = "Transcription", advanced = "Advanced"
         var id: String { rawValue }
     }
 
     var body: some View {
         VStack(spacing: 0) {
-            Picker("Seção", selection: $page) {
+            Picker("Section", selection: $page) {
                 ForEach(Page.allCases) { Text($0.rawValue).tag($0) }
             }
             .pickerStyle(.segmented).labelsHidden()
-            .padding(.horizontal, 20).padding(.top, 20).padding(.bottom, 12)
+            .padding(.horizontal, RackLayout.l).padding(.top, RackLayout.l).padding(.bottom, RackLayout.m)
 
             Form {
                 switch page {
@@ -32,9 +32,9 @@ struct TranscribeSettingsView: View {
             Divider()
             HStack {
                 Spacer()
-                Button("Concluído") { isPresented = false }
+                Button("Done") { isPresented = false }
                     .keyboardShortcut(.defaultAction).controlSize(.large)
-            }.padding(.horizontal, 20).padding(.vertical, 12)
+            }.padding(.horizontal, RackLayout.l).padding(.vertical, RackLayout.m)
         }
         .frame(width: 560, height: 640)
         .onChange(of: store.settings) { _, _ in store.saveSettings() }
@@ -46,23 +46,23 @@ struct TranscribeSettingsView: View {
 
     @ViewBuilder private var account: some View {
         Section {
-            SecureField("API key", text: $store.apiKey, prompt: Text("Cole a chave da AssemblyAI"))
-            Link("Obter API key na AssemblyAI", destination: URL(string: "https://www.assemblyai.com/dashboard/signup")!)
-            HStack(spacing: 12) {
-                Button("Salvar chave") { store.savePreferences() }
-                Button("Testar conexão") { store.savePreferences(); store.validateAPIKey() }
+            SecureField("API key", text: $store.apiKey, prompt: Text("Paste your AssemblyAI key"))
+            Link("Get an API key from AssemblyAI", destination: URL(string: "https://www.assemblyai.com/dashboard/signup")!)
+            HStack(spacing: RackLayout.m) {
+                Button("Save Key") { store.savePreferences() }
+                Button("Test Connection") { store.savePreferences(); store.validateAPIKey() }
                     .disabled(store.isBusy || store.isRecording || !store.hasAPIKey)
                 if store.isBusy { ProgressView().controlSize(.small) }
             }
-        } header: { Text("Conecte sua conta") } footer: {
-            Text("A transcrição usa o saldo da sua conta AssemblyAI. A chave fica protegida no Keychain do macOS.")
+        } header: { Text("Connect your account") } footer: {
+            Text("Transcription uses credits from your AssemblyAI account. Your key is stored in the macOS Keychain.")
         }
         Section {
-            Picker("Região dos dados", selection: $store.settings.region) {
+            Picker("Data region", selection: $store.settings.region) {
                 ForEach(AssemblyRegion.allCases) { Text($0.rawValue).tag($0) }
             }
-        } header: { Text("Onde seus dados ficam") } footer: {
-            Text("Os arquivos são enviados à AssemblyAI para transcrição. O histórico fica neste Mac.")
+        } header: { Text("Where your data is stored") } footer: {
+            Text("Files are sent to AssemblyAI for transcription. History stays on this Mac.")
         }
         librarySection
     }
@@ -71,8 +71,8 @@ struct TranscribeSettingsView: View {
         Section {
             switch store.importState {
             case .running(let progress):
-                ProgressView(value: progress) { Text("Copiando biblioteca…") }
-                Button("Cancelar importação") { store.cancelLegacyImport() }
+                ProgressView(value: progress) { Text("Copying library…") }
+                Button("Cancel Import") { store.cancelLegacyImport() }
             case .done(let text):
                 Label(text, systemImage: "checkmark.circle.fill").foregroundStyle(.green)
             case .failed(let message):
@@ -81,8 +81,8 @@ struct TranscribeSettingsView: View {
             case .idle:
                 importButton
             }
-        } header: { Text("Biblioteca do Meeting Scribe") } footer: {
-            Text("Copia as transcrições e arquivos do app Meeting Scribe sem alterar o original. Itens que já estão aqui são ignorados.")
+        } header: { Text("Meeting Scribe library") } footer: {
+            Text("Copies transcripts and files from the Meeting Scribe app. The originals are not changed. Items already here are skipped.")
         }
     }
 
@@ -91,96 +91,96 @@ struct TranscribeSettingsView: View {
             Button(legacyTitle(legacy)) { store.importLegacyLibrary() }
                 .disabled(store.isBusy || store.isRecording)
         } else {
-            Text("Nenhuma biblioteca do Meeting Scribe encontrada neste Mac.").foregroundStyle(.secondary)
+            Text("No Meeting Scribe library found on this Mac.").foregroundStyle(.secondary)
         }
     }
 
     private func legacyTitle(_ offer: TranscribeStore.LegacyOffer) -> String {
-        guard let count = offer.count, let bytes = offer.bytes else { return "Importar biblioteca do Meeting Scribe…" }
-        return "Importar \(count) \(count == 1 ? "transcrição" : "transcrições") (\(ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)))"
+        guard let count = offer.count, let bytes = offer.bytes else { return "Import Meeting Scribe Library…" }
+        return "Import \(count) \(count == 1 ? "Transcript" : "Transcripts") (\(ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)))"
     }
 
-    // MARK: Transcrição
+    // MARK: Transcription
 
     @ViewBuilder private var transcription: some View {
         Section {
-            Picker("Modelo", selection: $store.settings.model) {
+            Picker("Model", selection: $store.settings.model) {
                 ForEach(SpeechModelChoice.allCases) { Text($0.title).tag($0) }
             }
-            TextField("Idioma", text: $store.settings.languageCode, prompt: Text("Automático"))
+            TextField("Language", text: $store.settings.languageCode, prompt: Text("Automatic"))
                 .multilineTextAlignment(.trailing)
-        } header: { Text("Texto e idioma") } footer: {
-            Text("Deixe o idioma vazio para detectar automaticamente ou use pt para português.")
+        } header: { Text("Text and language") } footer: {
+            Text("Leave empty to detect the language automatically, or enter a code such as en or pt.")
         }
-        Section("Participantes") {
-            Toggle("Separar locutores", isOn: $store.settings.speakerLabels)
-            numberField("Número exato de locutores", $store.settings.expectedSpeakers)
+        Section("Speakers") {
+            Toggle("Identify speakers", isOn: $store.settings.speakerLabels)
+            numberField("Exact number of speakers", $store.settings.expectedSpeakers)
                 .disabled(!store.settings.speakerLabels)
-            numberField("Mínimo de locutores", $store.settings.minimumSpeakers)
+            numberField("Minimum speakers", $store.settings.minimumSpeakers)
                 .disabled(!store.settings.speakerLabels || store.settings.expectedSpeakers != nil)
-            numberField("Máximo de locutores", $store.settings.maximumSpeakers)
+            numberField("Maximum speakers", $store.settings.maximumSpeakers)
                 .disabled(!store.settings.speakerLabels || store.settings.expectedSpeakers != nil)
-            TextField("Nomes conhecidos", text: $store.settings.speakerNames, prompt: Text("Separados por vírgula"))
+            TextField("Known names", text: $store.settings.speakerNames, prompt: Text("Comma-separated"))
                 .multilineTextAlignment(.trailing)
                 .disabled(!store.settings.speakerLabels)
-            Toggle("Áudio multicanal importado", isOn: $store.settings.multichannel)
+            Toggle("Multichannel imported audio", isOn: $store.settings.multichannel)
         }
         Section {
-            Toggle("Gerar resumo, decisões e tarefas", isOn: $store.settings.generateSummary)
-            Toggle("Apagar a transcrição remota depois de exportar", isOn: $store.settings.deleteRemoteAfterSave)
-        } header: { Text("Resumo e privacidade") } footer: {
-            Text("O resumo exige acesso ao modelo de resumo na AssemblyAI. Se falhar, a transcrição continua disponível.")
+            Toggle("Generate summary, decisions, and action items", isOn: $store.settings.generateSummary)
+            Toggle("Delete the remote transcript after exporting", isOn: $store.settings.deleteRemoteAfterSave)
+        } header: { Text("Summary and privacy") } footer: {
+            Text("The summary requires access to the summary model in AssemblyAI. If it fails, the transcript is still available.")
         }
     }
 
-    // MARK: Avançado
+    // MARK: Advanced
 
     @ViewBuilder private var advanced: some View {
         Section {
-            TextField("Contexto da reunião", text: $store.settings.prompt, axis: .vertical).lineLimit(3...8)
-            TextField("Termos importantes", text: $store.settings.keyterms, prompt: Text("Separados por vírgula"), axis: .vertical).lineLimit(2...6)
-            TextField("Grafias personalizadas", text: $store.settings.customSpelling, prompt: Text("variante|variante=Correto"), axis: .vertical).lineLimit(2...6)
-        } header: { Text("Vocabulário e contexto") } footer: {
-            Text("Use variante|variante=Correto para indicar a grafia desejada.")
+            TextField("Meeting context", text: $store.settings.prompt, axis: .vertical).lineLimit(3...8)
+            TextField("Important terms", text: $store.settings.keyterms, prompt: Text("Comma-separated"), axis: .vertical).lineLimit(2...6)
+            TextField("Custom spelling", text: $store.settings.customSpelling, prompt: Text("variant|variant=Correct"), axis: .vertical).lineLimit(2...6)
+        } header: { Text("Vocabulary and context") } footer: {
+            Text("Use variant|variant=Correct to set the spelling you want.")
         }
-        Section("Formatação do texto") {
-            Picker("Eventos de áudio", selection: $store.settings.audioTags) {
+        Section("Text formatting") {
+            Picker("Audio events", selection: $store.settings.audioTags) {
                 ForEach(AudioTagsChoice.allCases) { Text($0.title).tag($0) }
             }
-            Toggle("Pontuação automática", isOn: $store.settings.punctuate)
-            Toggle("Formatação automática", isOn: $store.settings.formatText)
-            Toggle("Preservar hesitações", isOn: $store.settings.disfluencies)
-            Toggle("Filtrar palavrões", isOn: $store.settings.filterProfanity)
+            Toggle("Automatic punctuation", isOn: $store.settings.punctuate)
+            Toggle("Automatic formatting", isOn: $store.settings.formatText)
+            Toggle("Keep filler words", isOn: $store.settings.disfluencies)
+            Toggle("Filter profanity", isOn: $store.settings.filterProfanity)
         }
-        Section("Dados pessoais") {
-            Toggle("Ocultar dados pessoais", isOn: $store.settings.redactPII)
-            Picker("Substituição", selection: $store.settings.piiSubstitution) {
+        Section("Personal information") {
+            Toggle("Redact personal information", isOn: $store.settings.redactPII)
+            Picker("Replacement", selection: $store.settings.piiSubstitution) {
                 ForEach(PIISubstitution.allCases) { Text($0.title).tag($0) }
             }.disabled(!store.settings.redactPII)
         }
-        Section("Análises adicionais") {
-            Toggle("Detectar entidades", isOn: $store.settings.entityDetection)
-            Toggle("Análise de sentimento", isOn: $store.settings.sentimentAnalysis)
-            Toggle("Frases-chave", isOn: $store.settings.autoHighlights)
-            Toggle("Tópicos IAB", isOn: $store.settings.iabCategories)
-            Toggle("Classificação de segurança", isOn: $store.settings.contentSafety)
-            Toggle("Vocabulário médico", isOn: $store.settings.medicalMode)
+        Section("Additional analysis") {
+            Toggle("Detect entities", isOn: $store.settings.entityDetection)
+            Toggle("Sentiment analysis", isOn: $store.settings.sentimentAnalysis)
+            Toggle("Key phrases", isOn: $store.settings.autoHighlights)
+            Toggle("IAB topics", isOn: $store.settings.iabCategories)
+            Toggle("Content safety", isOn: $store.settings.contentSafety)
+            Toggle("Medical vocabulary", isOn: $store.settings.medicalMode)
         }
         Section {
-            numberField("Início (segundos)", $store.settings.audioStartSeconds)
-            numberField("Fim (segundos)", $store.settings.audioEndSeconds)
-        } header: { Text("Trecho do áudio") } footer: {
-            Text("Deixe os campos vazios para transcrever o arquivo inteiro.")
+            numberField("Start (seconds)", $store.settings.audioStartSeconds)
+            numberField("End (seconds)", $store.settings.audioEndSeconds)
+        } header: { Text("Audio range") } footer: {
+            Text("Leave these empty to transcribe the whole file.")
         }
     }
 
     private func numberField(_ title: String, _ value: Binding<Int?>) -> some View {
-        TextField(title, value: value, format: .number, prompt: Text("Opcional"))
+        TextField(title, value: value, format: .number, prompt: Text("Optional"))
             .multilineTextAlignment(.trailing)
     }
 
     private func numberField(_ title: String, _ value: Binding<Double?>) -> some View {
-        TextField(title, value: value, format: .number, prompt: Text("Opcional"))
+        TextField(title, value: value, format: .number, prompt: Text("Optional"))
             .multilineTextAlignment(.trailing)
     }
 }

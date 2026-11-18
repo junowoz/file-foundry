@@ -27,15 +27,15 @@ import Testing
 @Test func inaccessibleSummaryHasRecoveryWithoutRawPayload() {
     let raw = #"{"metadata":{"errors":["Your account does not have access to this LLM Gateway model"]},"request_id":"private-id"}"#
     let message = AssemblyAIClient.errorMessage(statusCode: 400, data: Data(raw.utf8))
-    #expect(message.contains("A transcrição continua disponível"))
-    #expect(message.contains("tente gerar o resumo novamente"))
+    #expect(message.contains("The transcript is still available"))
+    #expect(message.contains("try generating the summary again"))
     #expect(!message.contains("private-id"))
 }
 
 @Test func authenticationAndRateLimitsHaveRecovery() {
     #expect(AssemblyAIClient.errorMessage(statusCode: 401, data: Data()).contains("API key"))
-    #expect(AssemblyAIClient.errorMessage(statusCode: 429, data: Data()).contains("Aguarde"))
-    #expect(AssemblyAIClient.errorMessage(statusCode: 503, data: Data()).contains("Tente novamente"))
+    #expect(AssemblyAIClient.errorMessage(statusCode: 429, data: Data()).contains("Wait"))
+    #expect(AssemblyAIClient.errorMessage(statusCode: 503, data: Data()).contains("Try again"))
 }
 
 @MainActor @Test func failedTrashPreservesHistory() throws {
@@ -52,7 +52,7 @@ import Testing
     store.remove(meeting, deleteFiles: true)
     #expect(store.meetings.count == 1)
     #expect(store.selection == meeting.id)
-    #expect(store.alertMessage?.contains("histórico foi preservado") == true)
+    #expect(store.alertMessage?.contains("history was kept") == true)
 }
 
 @MainActor @Test func renameTrimsAndRejectsBlankTitle() {
@@ -104,7 +104,7 @@ import Testing
     #expect(!store.isBusy)
     #expect(store.queuedCount == 0)
     #expect(try Data(contentsOf: index) == original)
-    #expect(store.alertMessage?.contains("preservado") == true)
+    #expect(store.alertMessage?.contains("was kept") == true)
 }
 
 
@@ -131,7 +131,7 @@ import Testing
     #expect(meeting.text == "Texto já salvo.")
     #expect(meeting.transcriptID == "remote-id")
     #expect(meeting.errorMessage == nil)
-    #expect(meeting.summaryError?.contains("cancelado") == true)
+    #expect(meeting.summaryError?.contains("canceled") == true)
 }
 
 @Test func cancelledTranscriptionKeepsRemoteIDForResume() {
@@ -141,7 +141,7 @@ import Testing
     meeting.markProcessingCancelled()
     #expect(meeting.status == .failed)
     #expect(meeting.transcriptID == "remote-id")
-    #expect(meeting.errorMessage?.contains("retomado") == true)
+    #expect(meeting.errorMessage?.contains("resume") == true)
 }
 
 @MainActor private func transcribeBatchStore(trashed: @escaping (URL) -> Void = { _ in }) throws -> (TranscribeStore, URL) {
@@ -179,7 +179,7 @@ import Testing
     #expect(trashed.count == 2)
     #expect(store.meetings.map(\.id) == [c.id])
     #expect(store.selection == c.id)
-    #expect(store.notice?.text.contains("2 transcrições movidas para o Lixo") == true)
+    #expect(store.notice?.text.contains("2 transcripts moved to the Trash") == true)
     let saved = try Data(contentsOf: root.appending(path: "meetings.json"))
     #expect(try JSONSerialization.jsonObject(with: saved) is [Any])
 }
@@ -258,7 +258,7 @@ import Testing
     #expect(result.originalsTrashed == 1 && result.removed == 1)
     #expect(trashed.count == 2)
     #expect(trashed.contains(original.standardizedFileURL.path))
-    #expect(store.notice?.text == "1 transcrição e 1 original movidos para o Lixo")
+    #expect(store.notice?.text == "1 transcript and 1 original moved to the Trash")
 }
 
 @MainActor @Test func deleteNeverTrashesSymlinksDirectoriesOrFilesInsideLibrary() throws {
@@ -317,5 +317,5 @@ import Testing
     }
     store.meetings = metas
     store.remove(ids: Set(metas.map(\.id)), alsoTrashOriginals: true)
-    #expect(store.notice?.text == "3 transcrições e 3 originais movidos para o Lixo")
+    #expect(store.notice?.text == "3 transcripts and 3 originals moved to the Trash")
 }
