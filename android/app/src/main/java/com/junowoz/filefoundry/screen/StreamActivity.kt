@@ -93,12 +93,12 @@ class StreamActivity : Activity(), SurfaceHolder.Callback, StreamClient.Listener
         surfaceView = SurfaceView(this).also { it.holder.addCallback(this) }
         root.addView(surfaceView, FrameLayout.LayoutParams(-1, -1))
 
-        status = Ui.text(this, "Connecting to ${target.label}...", 16f, Ui.MUTED).apply { gravity = Gravity.CENTER }
+        status = Ui.text(this, "Connecting to ${target.label}\u2026", 16f, Ui.MUTED).apply { gravity = Gravity.CENTER }
         root.addView(status, FrameLayout.LayoutParams(-2, -2, Gravity.CENTER))
 
         val pad = Ui.dp(this, 12)
         statsText = Ui.text(this, "", 13f, Ui.TEXT)
-        lockButton = Ui.button(this, "Lock rotation", false) { toggleRotationLock() }
+        lockButton = Ui.button(this, "Lock Rotation", false) { toggleRotationLock() }
         val disconnect = Ui.button(this, "Disconnect", false) { finishStreaming() }
         overlay = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -138,7 +138,7 @@ class StreamActivity : Activity(), SurfaceHolder.Callback, StreamClient.Listener
         rotationLocked = !rotationLocked
         requestedOrientation = if (rotationLocked) ActivityInfo.SCREEN_ORIENTATION_LOCKED
         else ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-        lockButton.text = if (rotationLocked) "Unlock rotation" else "Lock rotation"
+        lockButton.text = if (rotationLocked) "Unlock Rotation" else "Lock Rotation"
     }
 
     private val statsTick = object : Runnable {
@@ -188,7 +188,7 @@ class StreamActivity : Activity(), SurfaceHolder.Callback, StreamClient.Listener
             decoder.start(surfaceView.holder.surface, c)
             requestKeyframe(force = true)
         } catch (e: Exception) {
-            status.text = "Decoder error: ${e.message}"
+            status.text = "Video decoder error: ${e.message}"
             status.visibility = View.VISIBLE
         }
     }
@@ -220,7 +220,7 @@ class StreamActivity : Activity(), SurfaceHolder.Callback, StreamClient.Listener
         while (!stopped) {
             val c = StreamClient(target, hello, pairingCode, this)
             client = c
-            ui.post { status.text = "Connecting to ${target.label}..."; status.visibility = View.VISIBLE }
+            ui.post { status.text = "Connecting to ${target.label}\u2026"; status.visibility = View.VISIBLE }
             when (val o = c.run()) {
                 is Outcome.Bye -> {
                     if (o.authenticated && o.reason == "busy") {

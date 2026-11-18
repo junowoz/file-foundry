@@ -23,12 +23,62 @@ struct SecondScreenView: View {
             .frame(maxWidth: .infinity)
         }
         .scrollContentBackground(.hidden)
+        .safeAreaInset(edge: .bottom, spacing: 0) { ConnectionBar(controller: controller) }
         .background(Color(nsColor: .windowBackgroundColor))
         .navigationTitle("Second Screen")
         .onAppear { controller.refreshPermissions() }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             controller.refreshPermissions()
         }
+    }
+}
+
+// MARK: - Status bar
+
+/// Bottom bar with the connection state, in the rack status bar style: one quiet line, dot plus text.
+private struct ConnectionBar: View {
+    let controller: SecondScreenController
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Circle().fill(tint).frame(width: 8, height: 8)
+            Text(summary).lineLimit(1).truncationMode(.middle)
+            Spacer(minLength: 12)
+        }
+        .font(.callout)
+        .foregroundStyle(.secondary)
+        .padding(.horizontal, 24)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.bar)
+        .overlay(alignment: .top) { Divider() }
+        .help(details)
+        .accessibilityElement(children: .combine)
+    }
+
+    private var tint: Color {
+        switch controller.phase {
+        case .streaming: .green
+        case .failed: .orange
+        case .idle: Color.secondary.opacity(0.5)
+        default: .accentColor
+        }
+    }
+
+    private var summary: String {
+        switch controller.phase {
+        case .idle: "Off"
+        case .waiting: "Waiting for a tablet"
+        case .connecting(let n): "Connecting to \u{201C}\(n)\u{201D}"
+        case .streaming(let n, let usb): "Connected to \u{201C}\(n)\u{201D} \u{00B7} \(usb ? "USB" : "Wi-Fi")"
+        case .failed: "Could not start"
+        }
+    }
+
+    /// Technical details live in the help tag, not in the primary copy.
+    private var details: String {
+        guard controller.isStreaming, let i = controller.streamInfo else { return summary }
+        return "\(i.width)\u{00D7}\(i.height) \u{00B7} \(i.codec == "hevc" ? "HEVC" : "H.264") video \u{00B7} encrypted"
     }
 }
 
@@ -122,11 +172,11 @@ private struct StatusCard: View {
         case .idle: "Turn an Android tablet into an extra display for this Mac."
         case .waiting:
             controller.usbDevices > 0
-                ? "USB: \(controller.usbDevices) device\(controller.usbDevices == 1 ? "" : "s") ready. Open File Foundry Screen on the tablet."
+                ? "\(controller.usbDevices) USB \(controller.usbDevices == 1 ? "device is" : "devices are") ready. Open File Foundry Screen on the tablet."
                 : "Open File Foundry Screen on the tablet, over USB or the same Wi-Fi."
-        case .connecting: "Preparing the display"
+        case .connecting: "Preparing the display\u{2026}"
         case .streaming(_, let usb):
-            "\(usb ? "USB" : "Wi-Fi")" + (controller.streamInfo.map { " \u{00B7} \($0.width)\u{00D7}\($0.height) \u{00B7} \($0.codec == "hevc" ? "HEVC" : "H.264")" } ?? "")
+            "\(usb ? "USB" : "Wi-Fi")" + (controller.streamInfo.map { " \u{00B7} \($0.width)\u{00D7}\($0.height)" } ?? "")
         case .failed(let m): m
         }
     }
@@ -136,7 +186,7 @@ private struct PairingCard: View {
     let controller: SecondScreenController
 
     var body: some View {
-        Card("Pairing code") {
+        Card("Pairing Code") {
             HStack(alignment: .firstTextBaseline, spacing: 16) {
                 Text(SSPairingCode.display(controller.pairingCode))
                     .font(.system(size: 28, weight: .semibold, design: .monospaced))
@@ -156,10 +206,10 @@ private struct PairingCard: View {
                 } label: {
                     Image(systemName: "arrow.clockwise")
                 }
-                .help("New code")
-                .accessibilityLabel("New code")
+                .help("New Code")
+                .accessibilityLabel("New Code")
             }
-            Text("Enter this code on the tablet the first time. After pairing, the tablet reconnects on its own.")
+            Text("Enter this code on the tablet the first time. After that, it reconnects on its own.")
                 .font(.callout).foregroundStyle(.secondary)
             if controller.justPaired {
                 Label("Paired", systemImage: "checkmark.circle.fill").foregroundStyle(.green)
@@ -175,7 +225,7 @@ private struct StatsCard: View {
         let s = controller.stats
         Card("Live") {
             HStack(spacing: 0) {
-                stat("Frame rate", String(format: "%.0f", s.sentFps), "fps")
+                stat("Frame Rate", String(format: "%.0f", s.sentFps), "fps")
                 stat("Bitrate", String(format: "%.1f", s.bitrate / 1_000_000), "Mbps")
                 stat("Latency", String(format: "%.0f", s.rttMs), "ms")
                 stat("Dropped", "\(s.droppedFrames)", "")
@@ -207,7 +257,7 @@ private struct SettingsCard: View {
                         ForEach(SSResolutionPreset.allCases) { Text($0.title).tag($0) }
                     }
                 }
-                row("Frame rate") {
+                row("Frame Rate") {
                     Picker("Frame rate", selection: $controller.settings.frameRate) {
                         ForEach(SSFrameRate.allCases) { Text($0.title).tag($0) }
                     }
@@ -229,14 +279,15 @@ private struct SettingsCard: View {
                             .monospacedDigit().foregroundStyle(.secondary)
                     }
                 }
-                row("Codec") {
-                    Picker("Codec", selection: $controller.settings.codec) {
+                row("Video Format") {
+                    Picker("Video Format", selection: $controller.settings.codec) {
                         ForEach(SSCodecPreference.allCases) { Text($0.title).tag($0) }
                     }
+                    .help("Automatic picks HEVC when the tablet supports it, otherwise H.264.")
                 }
             }
             if controller.isStreaming {
-                Text("Changes apply the next time the tablet connects.")
+                Text("Changes apply the next time a tablet connects.")
                     .font(.caption).foregroundStyle(.secondary)
             }
         }
@@ -257,13 +308,13 @@ private struct PermissionsCard: View {
 
     var body: some View {
         Card("Permissions") {
-            permission("Screen Recording", "Captures the virtual display.", controller.screenRecording == .granted,
+            permission("Screen Recording", "Lets File Foundry send the extra display to the tablet.", controller.screenRecording == .granted,
                        action: "Grant") { controller.requestScreenRecording(); controller.openSettings(.screenRecording) }
             Divider()
-            permission("Accessibility", "Lets touches on the tablet move the Mac pointer.", controller.accessibility == .granted,
+            permission("Accessibility", "Lets touches on the tablet control the Mac.", controller.accessibility == .granted,
                        action: "Open Settings") { controller.requestAccessibility(); controller.openSettings(.accessibility) }
             Divider()
-            permission("Local Network", "Lets the tablet find this Mac over Wi-Fi. macOS asks on first start.",
+            permission("Local Network", "Lets the tablet find this Mac over Wi-Fi. macOS asks the first time.",
                        controller.localNetworkReady, action: "Open Settings") { controller.openSettings(.localNetwork) }
         }
     }
@@ -287,13 +338,13 @@ private struct PairedDevicesCard: View {
     let controller: SecondScreenController
 
     var body: some View {
-        Card("Paired tablets") {
+        Card("Paired Tablets") {
             if controller.pairedDevices.isEmpty {
-                Text("None yet. Install File Foundry Screen on the tablet, then pair it with the code above.")
+                Text("No tablets yet. Install File Foundry Screen on your tablet, then pair it with the code above.")
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
-                Link(destination: URL(string: "https://github.com/junowoz/file-foundry/releases/latest/download/FileFoundryScreen.apk")!) {
-                    Label("Download the Android app (APK)", systemImage: "arrow.down.circle")
+                Link(destination: URL(string: "https://github.com/junowoz/file-foundry/releases/latest/download/FileFoundry-Android.apk")!) {
+                    Label("Download the Android App", systemImage: "arrow.down.circle")
                 }
             } else {
                 ForEach(controller.pairedDevices) { device in
