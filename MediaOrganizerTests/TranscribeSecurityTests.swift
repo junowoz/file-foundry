@@ -32,7 +32,7 @@ private func secTemp() throws -> URL {
     let result = store.remove(ids: [m.id], alsoTrashOriginals: true)
     #expect(result.removed == 1 && result.originalsTrashed == 0 && result.originalsChanged == 1)
     #expect(!trashed.contains("voice.mp3"))
-    #expect(store.alertMessage?.contains("Original alterado; não movido") == true)
+    #expect(store.alertMessage?.contains("Original changed; not moved") == true)
 }
 
 @MainActor @Test func replacedOriginalWithNewInodeIsNotTrashed() throws {

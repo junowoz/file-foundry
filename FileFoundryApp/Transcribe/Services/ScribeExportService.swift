@@ -10,11 +10,11 @@ enum ScribeExportService {
         var fileExtension: String { self == .markdown ? "md" : rawValue }
         var title: String {
             switch self {
-            case .txt: "Texto (.txt)"
+            case .txt: "Plain Text (.txt)"
             case .markdown: "Markdown (.md)"
-            case .pdf: "Documento PDF (.pdf)"
-            case .srt: "Legendas (.srt)"
-            case .vtt: "Legendas WebVTT (.vtt)"
+            case .pdf: "PDF Document (.pdf)"
+            case .srt: "Subtitles (.srt)"
+            case .vtt: "WebVTT Captions (.vtt)"
             }
         }
         var contentType: UTType { UTType(filenameExtension: fileExtension) ?? .plainText }
@@ -25,7 +25,7 @@ enum ScribeExportService {
         let invalid = CharacterSet.controlCharacters.union(CharacterSet(charactersIn: "/:\\"))
         let name = meeting.title.components(separatedBy: invalid).joined(separator: "-")
             .trimmingCharacters(in: .whitespacesAndNewlines)
-        return String((name.isEmpty ? "Transcrição" : name).prefix(120)) + "." + format.fileExtension
+        return String((name.isEmpty ? "Transcript" : name).prefix(120)) + "." + format.fileExtension
     }
 
     static func transcriptText(_ meeting: Meeting) -> String {
@@ -40,11 +40,11 @@ enum ScribeExportService {
 
     static func markdown(_ meeting: Meeting) -> String {
         let heading = meeting.title.replacingOccurrences(of: "\n", with: " ")
-        var text = "# \(heading)\n\nData: \(ScribeFormatters.date.string(from: meeting.createdAt))\n\nDuração: \(ScribeFormatters.duration(meeting.durationSeconds))\n"
+        var text = "# \(heading)\n\nDate: \(ScribeFormatters.date.string(from: meeting.createdAt))\n\nDuration: \(ScribeFormatters.duration(meeting.durationSeconds))\n"
         if let summary = meeting.summary, !summary.isEmpty, !summary.contains("Resumo não gerado:") {
-            text += "\n## Resumo\n\n\(summary)\n"
+            text += "\n## Summary\n\n\(summary)\n"
         }
-        return text + "\n## Transcrição\n\n" + transcriptText(meeting) + "\n"
+        return text + "\n## Transcript\n\n" + transcriptText(meeting) + "\n"
     }
 
     static func export(meeting: Meeting, format: Format, to url: URL) throws {
@@ -94,9 +94,9 @@ enum ScribeExportService {
         ])
         text.append(NSAttributedString(string: ScribeFormatters.date.string(from: meeting.createdAt) + " · " + ScribeFormatters.duration(meeting.durationSeconds) + "\n\n", attributes: attributes))
         if let summary = meeting.summary, !summary.isEmpty, !summary.contains("Resumo não gerado:") {
-            text.append(NSAttributedString(string: "Resumo\n\n" + summary + "\n\n", attributes: attributes))
+            text.append(NSAttributedString(string: "Summary\n\n" + summary + "\n\n", attributes: attributes))
         }
-        text.append(NSAttributedString(string: "Transcrição\n\n" + transcriptText(meeting), attributes: attributes))
+        text.append(NSAttributedString(string: "Transcript\n\n" + transcriptText(meeting), attributes: attributes))
         let framesetter = CTFramesetterCreateWithAttributedString(text)
         let output = NSMutableData()
         guard let consumer = CGDataConsumer(data: output as CFMutableData) else { throw ExportError.pdfFailed }
@@ -125,9 +125,9 @@ enum ScribeExportService {
         case noTranscript, noTimestamps, pdfFailed
         var errorDescription: String? {
             switch self {
-            case .noTranscript: "A transcrição ainda não está disponível. Aguarde a conclusão antes de exportar."
-            case .noTimestamps: "Esta transcrição não tem marcações de tempo. Exporte como TXT, Markdown ou PDF."
-            case .pdfFailed: "Não foi possível criar o PDF. Tente exportar como TXT ou Markdown."
+            case .noTranscript: "The transcript isn't ready yet. Wait for it to finish before exporting."
+            case .noTimestamps: "This transcript has no timestamps. Export it as TXT, Markdown, or PDF."
+            case .pdfFailed: "Couldn't create the PDF. Try exporting as TXT or Markdown."
             }
         }
     }
@@ -145,9 +145,9 @@ enum ScribeExportService {
         if let vtt { try vtt.write(to: directory.appending(path: "transcript.vtt"), atomically: true, encoding: .utf8) }
         let model = meeting.speechModelUsed ?? "—"
         let language = meeting.languageCode ?? "—"
-        let markdown = "# \(meeting.title)\n\n- Data: \(ScribeFormatters.date.string(from: meeting.createdAt))\n- Duração: \(ScribeFormatters.duration(meeting.durationSeconds))\n- Modelo: \(model)\n- Idioma: \(language)\n\n## Transcrição\n\n" + transcript + "\n"
+        let markdown = "# \(meeting.title)\n\n- Date: \(ScribeFormatters.date.string(from: meeting.createdAt))\n- Duration: \(ScribeFormatters.duration(meeting.durationSeconds))\n- Model: \(model)\n- Language: \(language)\n\n## Transcript\n\n" + transcript + "\n"
         try markdown.write(to: directory.appending(path: "transcript.md"), atomically: true, encoding: .utf8)
-        let csv = "inicio_ms,fim_ms,speaker,confianca,texto\n" + meeting.words.map {
+        let csv = "start_ms,end_ms,speaker,confidence,text\n" + meeting.words.map {
             let escaped = $0.text.replacingOccurrences(of: "\"", with: "\"\"")
             let speaker = $0.speaker ?? ""
             return "\($0.start),\($0.end),\(speaker),\($0.confidence),\"\(escaped)\""

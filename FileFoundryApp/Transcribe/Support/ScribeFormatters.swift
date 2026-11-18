@@ -3,7 +3,6 @@ import Foundation
 enum ScribeFormatters {
     static let date: DateFormatter = {
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "pt_BR")
         formatter.dateStyle = .medium
         formatter.timeStyle = .short
         return formatter

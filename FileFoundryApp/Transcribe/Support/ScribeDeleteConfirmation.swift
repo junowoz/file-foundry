@@ -8,12 +8,12 @@ enum ScribeDeleteConfirmation {
         let alert = NSAlert()
         alert.alertStyle = .warning
         alert.messageText = title
-        alert.informativeText = "As pastas vão para o Lixo do Mac e podem ser recuperadas de lá."
-        let trash = alert.addButton(withTitle: "Mover para o Lixo")
+        alert.informativeText = "Items moved to the Trash can be restored from there."
+        let trash = alert.addButton(withTitle: "Move to Trash")
         trash.hasDestructiveAction = true
-        alert.addButton(withTitle: "Cancelar")
+        alert.addButton(withTitle: "Cancel")
         alert.showsSuppressionButton = true
-        alert.suppressionButton?.title = "Também mover o arquivo original para o Lixo"
+        alert.suppressionButton?.title = "Also move the original file to the Trash"
         alert.suppressionButton?.state = UserDefaults.standard.bool(forKey: TranscribeStore.trashOriginalsKey) ? .on : .off
         let finish: (NSApplication.ModalResponse) -> Void = { response in
             guard response == .alertFirstButtonReturn else { return }

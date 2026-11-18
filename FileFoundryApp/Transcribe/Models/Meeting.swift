@@ -8,6 +8,19 @@ enum MeetingStatus: String, Codable {
     case summarizing = "Gerando resumo"
     case completed = "Concluída"
     case failed = "Falhou"
+
+    /// English label for the UI. The raw values above are persisted in meetings.json and must not change.
+    var displayName: String {
+        switch self {
+        case .ready: "Ready"
+        case .preparing: "Preparing Media"
+        case .uploading: "Uploading"
+        case .transcribing: "Transcribing"
+        case .summarizing: "Summarizing"
+        case .completed: "Completed"
+        case .failed: "Failed"
+        }
+    }
 }
 
 struct TranscriptWord: Codable, Hashable, Identifiable {
@@ -75,12 +88,12 @@ struct Meeting: Codable, Identifiable, Hashable {
             status = .completed
             progress = 1
             errorMessage = nil
-            summaryError = "Resumo cancelado. Sua transcrição está salva. Você pode gerar o resumo novamente."
+            summaryError = "Summary canceled. Your transcript is saved. You can generate the summary again."
         } else {
             status = .failed
             errorMessage = transcriptID == nil
-                ? "Processamento cancelado. Tente novamente quando quiser."
-                : "Processamento pausado. O ID remoto foi preservado e pode ser retomado sem criar cobrança duplicada."
+                ? "Processing canceled. Try again whenever you are ready."
+                : "Processing paused. The remote ID was kept, so processing can resume without a duplicate charge."
         }
     }
 

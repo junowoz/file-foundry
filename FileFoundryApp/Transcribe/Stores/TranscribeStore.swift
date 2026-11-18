@@ -90,7 +90,7 @@ final class TranscribeStore: ObservableObject {
     private func finishLoading() {
         selection = meetings.first?.id
         for meeting in meetings where [.preparing, .uploading].contains(meeting.status) {
-            update(meeting.id) { $0.status = .failed; $0.errorMessage = "O app foi fechado antes de receber um ID da AssemblyAI. Tente novamente." }
+            update(meeting.id) { $0.status = .failed; $0.errorMessage = "The app closed before AssemblyAI returned an ID. Try again." }
         }
         isLoaded = true
         resumePendingJobs()
@@ -241,9 +241,9 @@ final class TranscribeStore: ObservableObject {
             }
             legacyOffer = nil
             defaults.set(true, forKey: Self.legacyDismissedKey)
-            var text = outcome.imported == 1 ? "1 transcrição trazida do Meeting Scribe" : "\(outcome.imported) transcrições trazidas do Meeting Scribe"
-            if outcome.alreadyPresent > 0 { text += " · \(outcome.alreadyPresent) já estavam aqui" }
-            if outcome.skippedLinks > 0 { text += " · \(outcome.skippedLinks) \(outcome.skippedLinks == 1 ? "link simbólico ignorado" : "links simbólicos ignorados")" }
+            var text = outcome.imported == 1 ? "1 transcript imported from Meeting Scribe" : "\(outcome.imported) transcripts imported from Meeting Scribe"
+            if outcome.alreadyPresent > 0 { text += " · \(outcome.alreadyPresent) already here" }
+            if outcome.skippedLinks > 0 { text += " · \(outcome.skippedLinks) \(outcome.skippedLinks == 1 ? "symbolic link skipped" : "symbolic links skipped")" }
             importState = .done(text)
             showNotice(text)
         case .failure(let error):
@@ -272,12 +272,12 @@ final class TranscribeStore: ObservableObject {
 
     func validateAPIKey() {
         guard requireAPIKey(), !isBusy, !isRecording else { return }
-        isBusy = true; activityText = "Validando chave…"
+        isBusy = true; activityText = "Checking key…"
         activeTask = Task {
             defer { isBusy = false; activityText = ""; activeTask = nil; startNextJob() }
             do {
                 try await AssemblyAIClient(apiKey: apiKey, region: settings.region).validateKey()
-                alertMessage = "Chave válida. Conexão com a AssemblyAI concluída."
+                alertMessage = "Key is valid. Connected to AssemblyAI."
             } catch { alertMessage = error.localizedDescription }
         }
     }
@@ -287,7 +287,7 @@ final class TranscribeStore: ObservableObject {
     @discardableResult
     private func requireAPIKey() -> Bool {
         guard hasAPIKey else {
-            alertMessage = "Adicione sua API key da AssemblyAI em Ajustes antes de transcrever."
+            alertMessage = "Add your AssemblyAI API key in Settings before transcribing."
             settingsRequested = true
             return false
         }
@@ -309,11 +309,11 @@ final class TranscribeStore: ObservableObject {
 
     func enqueue(_ job: @escaping @MainActor () async -> Void) {
         guard !importState.isRunning else {
-            alertMessage = "Aguarde a importação da biblioteca terminar antes de transcrever."
+            alertMessage = "Wait for the library import to finish before transcribing."
             return
         }
         guard historyIsReadable else {
-            alertMessage = "O histórico não pôde ser lido. O arquivo original foi preservado. Abra a pasta de dados e restaure uma cópia válida de meetings.json antes de continuar."
+            alertMessage = "The history couldn't be read. The original file was kept. Open the data folder and restore a valid copy of meetings.json before continuing."
             return
         }
         pendingJobs.append(job)
@@ -338,9 +338,9 @@ final class TranscribeStore: ObservableObject {
 
     func startRecording(includeMicrophone: Bool, recordScreen: Bool) {
         guard !isRecording, !isBusy, !importState.isRunning, historyIsReadable, requireAPIKey() else { return }
-        let title = "Reunião \(Date().formatted(date: .abbreviated, time: .shortened))"
+        let title = "Meeting \(Date().formatted(date: .abbreviated, time: .shortened))"
         let directory = makeMeetingDirectory(title: title)
-        isBusy = true; activityText = "Solicitando permissões…"
+        isBusy = true; activityText = "Requesting permissions…"
         activeTask = Task {
             defer { activeMeetingID = nil; activeTask = nil; startNextJob() }
             do {
@@ -360,14 +360,14 @@ final class TranscribeStore: ObservableObject {
     func stopRecording() {
         guard isRecording else { return }
         isRecording = false; recordingTimer?.invalidate(); recordingTimer = nil
-        isBusy = true; activityText = "Finalizando e mixando áudio…"
+        isBusy = true; activityText = "Finishing and mixing audio…"
         activeTask = Task {
             defer { activeMeetingID = nil; activeTask = nil; startNextJob() }
             do {
                 let result = try await recordingService.stop()
                 try Task.checkCancellation()
                 isBusy = false; activityText = ""
-                await createAndTranscribe(sourceURL: result.audioURL, suggestedTitle: "Reunião \(Date().formatted(date: .abbreviated, time: .shortened))", existingDirectory: result.audioURL.deletingLastPathComponent(), duration: result.duration)
+                await createAndTranscribe(sourceURL: result.audioURL, suggestedTitle: "Meeting \(Date().formatted(date: .abbreviated, time: .shortened))", existingDirectory: result.audioURL.deletingLastPathComponent(), duration: result.duration)
             } catch is CancellationError {
                 isBusy = false; activityText = ""
             } catch { isBusy = false; activityText = ""; alertMessage = error.localizedDescription }
@@ -388,7 +388,7 @@ final class TranscribeStore: ObservableObject {
         if let pending = meetings.first(where: { $0.id == activeMeetingID }) {
             update(pending.id) { $0.markProcessingCancelled() }
         }
-        isBusy = activeTask != nil; activityText = isBusy ? "Cancelando…" : ""
+        isBusy = activeTask != nil; activityText = isBusy ? "Canceling…" : ""
     }
 
     func retry(_ meeting: Meeting) {
@@ -397,7 +397,7 @@ final class TranscribeStore: ObservableObject {
         else {
             let source = URL(filePath: meeting.sourcePath)
             guard isInsideLibrary(source) || isFingerprintedOriginal(meeting, path: meeting.sourcePath) else {
-                alertMessage = "O arquivo de origem está fora da biblioteca e não foi importado por este app. Ele não será enviado."
+                alertMessage = "The source file is outside the library and wasn't imported by this app, so it won't be sent."
                 return
             }
             importMedia(source)
@@ -439,7 +439,7 @@ final class TranscribeStore: ObservableObject {
 
     func remove(_ meeting: Meeting, deleteFiles: Bool) {
         guard activeMeetingID != meeting.id else {
-            alertMessage = "Cancele o processamento antes de excluir esta transcrição."
+            alertMessage = "Cancel processing before deleting this transcript."
             return
         }
         let directory = URL(filePath: meeting.outputDirectory)
@@ -447,7 +447,7 @@ final class TranscribeStore: ObservableObject {
            !isOutputDirectoryShared(meeting, excluding: []) {
             do { try trashItem(directory) }
             catch {
-                alertMessage = "Não foi possível mover os arquivos para a Lixeira. O histórico foi preservado. Tente novamente: \(error.localizedDescription)"
+                alertMessage = "Couldn't move the files to the Trash. The history was kept. Try again: \(error.localizedDescription)"
                 return
             }
         }
@@ -520,32 +520,31 @@ final class TranscribeStore: ObservableObject {
     private func announce(_ result: RemovalResult) {
         var problems: [String] = []
         if result.failed > 0 {
-            problems.append("Não foi possível mover \(result.failed) \(result.failed == 1 ? "pasta" : "pastas") para o Lixo. Esses itens foram mantidos na biblioteca.")
+            problems.append("Couldn't move \(result.failed) \(result.failed == 1 ? "folder" : "folders") to the Trash. These items were kept in the library.")
         }
         if result.originalsFailed > 0 {
-            problems.append("Não foi possível mover \(result.originalsFailed) \(result.originalsFailed == 1 ? "arquivo original" : "arquivos originais") para o Lixo.")
+            problems.append("Couldn't move \(result.originalsFailed) \(result.originalsFailed == 1 ? "original file" : "original files") to the Trash.")
         }
         if result.originalsChanged > 0 {
-            problems.append("Original alterado; não movido (\(result.originalsChanged) \(result.originalsChanged == 1 ? "arquivo" : "arquivos")).")
+            problems.append("Original changed; not moved (\(result.originalsChanged) \(result.originalsChanged == 1 ? "file" : "files")).")
         }
         if !problems.isEmpty { alertMessage = problems.joined(separator: " ") }
         guard result.removed > 0 else {
-            if result.skipped > 0 { showNotice("Itens em processamento não podem ser excluídos.") }
+            if result.skipped > 0 { showNotice("Items in progress can't be moved to the Trash.") }
             return
         }
-        var text = result.removed == 1 ? "1 transcrição" : "\(result.removed) transcrições"
+        var text = result.removed == 1 ? "1 transcript" : "\(result.removed) transcripts"
         if result.originalsTrashed > 0 {
-            text += " e \(result.originalsTrashed) \(result.originalsTrashed == 1 ? "original" : "originais")"
+            text += " and \(result.originalsTrashed) \(result.originalsTrashed == 1 ? "original" : "originals")"
         }
-        let moved = result.removed + result.originalsTrashed == 1 ? "movida" : "movidos"
-        text += result.originalsTrashed > 0 ? " \(moved) para o Lixo" : (result.removed == 1 ? " movida para o Lixo" : " movidas para o Lixo")
-        if result.skipped > 0 { text += " · \(result.skipped) em andamento mantida\(result.skipped == 1 ? "" : "s")" }
+        text += " moved to the Trash"
+        if result.skipped > 0 { text += " · \(result.skipped) in progress kept" }
         showNotice(text)
     }
 
     private func createAndTranscribe(sourceURL: URL, suggestedTitle: String, existingDirectory: URL? = nil, duration: Double? = nil) async {
         guard !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            alertMessage = "Adicione sua API key da AssemblyAI em Ajustes antes de transcrever."
+            alertMessage = "Add your AssemblyAI API key in Settings before transcribing."
             settingsRequested = true
             return
         }
@@ -574,22 +573,22 @@ final class TranscribeStore: ObservableObject {
             activeMeetingID = meeting.id
             meeting.status = .preparing; meeting.progress = 0.05
             meetings.insert(meeting, at: 0); selection = meeting.id; persistMeetings()
-            isBusy = true; activityText = "Preparando mídia…"
+            isBusy = true; activityText = "Preparing media…"
 
             let preparedURL: URL
             if localSource.lastPathComponent == "meeting-audio.m4a" { preparedURL = localSource }
             else { preparedURL = try await ScribeMediaProcessor.prepareAudio(from: localSource, in: directory) }
             try Task.checkCancellation()
             update(meeting.id) { $0.status = .uploading; $0.progress = 0.2 }
-            activityText = "Enviando para AssemblyAI…"
+            activityText = "Uploading to AssemblyAI…"
             let client = AssemblyAIClient(apiKey: apiKey, region: settings.region)
             let uploadURL = try await client.upload(fileURL: preparedURL)
             try Task.checkCancellation()
             let transcriptID = try await client.submit(audioURL: uploadURL, settings: settings)
             update(meeting.id) { $0.transcriptID = transcriptID; $0.status = .transcribing; $0.progress = 0.45 }
-            activityText = "Transcrevendo com \(settings.model.title)…"
+            activityText = "Transcribing with \(settings.model.title)…"
             let completed = try await client.waitForTranscript(id: transcriptID) { [weak self] status in
-                await MainActor.run { self?.activityText = status == "queued" ? "Na fila da AssemblyAI…" : "Transcrevendo…" }
+                await MainActor.run { self?.activityText = status == "queued" ? "Queued at AssemblyAI…" : "Transcribing…" }
             }
             let result = completed.result
             update(meeting.id) {
@@ -603,14 +602,14 @@ final class TranscribeStore: ObservableObject {
             }
             if settings.generateSummary {
                 update(meeting.id) { $0.status = .summarizing }
-                activityText = "Gerando notas da reunião…"
+                activityText = "Writing meeting notes…"
                 do {
                     let summary = try await client.summary(transcriptText: result.text ?? "")
                     update(meeting.id) { $0.summary = summary; $0.summaryError = nil }
                 } catch is CancellationError { throw CancellationError() }
                 catch { update(meeting.id) { $0.summaryError = error.localizedDescription } }
             }
-            activityText = "Exportando arquivos…"
+            activityText = "Exporting files…"
             async let srt = try? client.subtitle(id: transcriptID, format: "srt")
             async let vtt = try? client.subtitle(id: transcriptID, format: "vtt")
             let subtitleValues = await (srt, vtt)
@@ -619,7 +618,7 @@ final class TranscribeStore: ObservableObject {
             update(meeting.id) { $0.status = .completed; $0.progress = 1 }
             if settings.deleteRemoteAfterSave {
                 do { try await client.deleteTranscript(id: transcriptID) }
-                catch { alertMessage = "A transcrição está salva. Não foi possível apagar a cópia na AssemblyAI: \(error.localizedDescription)" }
+                catch { alertMessage = "The transcript is saved. Couldn't delete the copy in AssemblyAI: \(error.localizedDescription)" }
             }
             isBusy = false; activityText = ""
         } catch is CancellationError {
@@ -639,7 +638,7 @@ final class TranscribeStore: ObservableObject {
     private func handleCaptureError(_ error: Error) {
         guard isRecording else { return }
         isRecording = false; recordingTimer?.invalidate(); recordingTimer = nil
-        isBusy = false; activityText = ""; alertMessage = "A gravação foi interrompida pelo macOS: \(error.localizedDescription)"
+        isBusy = false; activityText = ""; alertMessage = "Recording was interrupted by macOS: \(error.localizedDescription)"
         activeTask = Task {
             await recordingService.cancel()
             activeTask = nil
@@ -650,12 +649,12 @@ final class TranscribeStore: ObservableObject {
     private func resumeTranscript(_ meeting: Meeting) async {
         guard meetings.contains(where: { $0.id == meeting.id }), let transcriptID = meeting.transcriptID, requireAPIKey() else { return }
         activeMeetingID = meeting.id
-        isBusy = true; activityText = "Retomando transcrição existente…"
+        isBusy = true; activityText = "Resuming existing transcript…"
         update(meeting.id) { $0.status = .transcribing; $0.errorMessage = nil }
         do {
             let client = AssemblyAIClient(apiKey: apiKey, region: settings.region)
             let completed = try await client.waitForTranscript(id: transcriptID) { [weak self] status in
-                await MainActor.run { self?.activityText = status == "queued" ? "Na fila da AssemblyAI…" : "Transcrevendo…" }
+                await MainActor.run { self?.activityText = status == "queued" ? "Queued at AssemblyAI…" : "Transcribing…" }
             }
             let result = completed.result
             update(meeting.id) {
@@ -669,7 +668,7 @@ final class TranscribeStore: ObservableObject {
             }
             if settings.generateSummary {
                 update(meeting.id) { $0.status = .summarizing }
-                activityText = "Gerando notas da reunião…"
+                activityText = "Writing meeting notes…"
                 do { let value = try await client.summary(transcriptText: result.text ?? ""); update(meeting.id) { $0.summary = value; $0.summaryError = nil } }
                 catch is CancellationError { throw CancellationError() }
                 catch { update(meeting.id) { $0.summaryError = error.localizedDescription } }
@@ -683,7 +682,7 @@ final class TranscribeStore: ObservableObject {
             update(meeting.id) { $0.status = .completed; $0.progress = 1 }
             if settings.deleteRemoteAfterSave {
                 do { try await client.deleteTranscript(id: transcriptID) }
-                catch { alertMessage = "A transcrição está salva. Não foi possível apagar a cópia na AssemblyAI: \(error.localizedDescription)" }
+                catch { alertMessage = "The transcript is saved. Couldn't delete the copy in AssemblyAI: \(error.localizedDescription)" }
             }
             isBusy = false; activityText = ""
         } catch is CancellationError {
@@ -698,7 +697,7 @@ final class TranscribeStore: ObservableObject {
         enqueue { [weak self] in
             guard let self, self.meetings.contains(where: { $0.id == meeting.id }) else { return }
             self.activeMeetingID = meeting.id
-            self.activityText = "Gerando resumo…"
+            self.activityText = "Writing summary…"
             self.update(meeting.id) { $0.status = .summarizing; $0.summaryError = nil }
             do {
                 let client = AssemblyAIClient(apiKey: self.apiKey, region: self.settings.region)
@@ -710,7 +709,7 @@ final class TranscribeStore: ObservableObject {
             } catch {
                 self.update(meeting.id) {
                     $0.status = .completed
-                    $0.summaryError = error is CancellationError ? "Resumo cancelado. Você pode tentar novamente." : error.localizedDescription
+                    $0.summaryError = error is CancellationError ? "Summary canceled. You can try again." : error.localizedDescription
                 }
             }
         }
@@ -732,14 +731,14 @@ final class TranscribeStore: ObservableObject {
         case .success(let decoded): value = decoded
         case .failure:
             historyIsReadable = false
-            alertMessage = "Não foi possível ler o histórico em \(indexURL.path). O arquivo foi preservado. Restaure uma cópia válida de meetings.json e reabra o app."
+            alertMessage = "Couldn't read the history at \(indexURL.path). The file was kept. Restore a valid copy of meetings.json and reopen the app."
             return
         }
         meetings = value.map { meeting in
             var restored = meeting
             if let summary = restored.summary, summary.hasPrefix("_Resumo não gerado:") {
                 restored.summary = nil
-                restored.summaryError = "O resumo anterior falhou. Tente gerar novamente ou confira o acesso ao resumo na sua conta AssemblyAI."
+                restored.summaryError = "The previous summary failed. Try generating it again, or check your AssemblyAI summary access."
             }
             return restored
         }
@@ -752,7 +751,7 @@ final class TranscribeStore: ObservableObject {
             // Keep backward-compatible decoding by storing dates in the default format for now.
             encoder.dateEncodingStrategy = .deferredToDate
             try encoder.encode(meetings).write(to: indexURL, options: .atomic)
-        } catch { alertMessage = "Não foi possível salvar o histórico: \(error.localizedDescription)" }
+        } catch { alertMessage = "Couldn't save the history: \(error.localizedDescription)" }
     }
 }
 

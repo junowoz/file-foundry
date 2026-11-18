@@ -36,14 +36,14 @@ enum ScribeLibraryImporter {
         var errorDescription: String? {
             switch self {
             case .permissionDenied:
-                "O macOS bloqueou o acesso aos dados do Meeting Scribe. Em Ajustes do Sistema > Privacidade e Segurança, permita que o File Foundry acesse dados de outros apps (ou Acesso Total ao Disco) e tente de novo."
-            case .missingLibrary: "Nenhuma biblioteca do Meeting Scribe foi encontrada neste Mac."
-            case .unreadableLegacyIndex: "Não foi possível ler o histórico do Meeting Scribe. Nada foi alterado."
-            case .unreadableCurrentIndex: "O histórico atual não pôde ser lido, então a importação foi interrompida para preservá-lo."
+                "macOS blocked access to Meeting Scribe data. In System Settings > Privacy & Security, allow File Foundry to access data from other apps (or Full Disk Access), then try again."
+            case .missingLibrary: "No Meeting Scribe library was found on this Mac."
+            case .unreadableLegacyIndex: "Couldn't read the Meeting Scribe history. Nothing was changed."
+            case .unreadableCurrentIndex: "The current history couldn't be read, so the import was stopped to keep it safe."
             case .insufficientSpace(let needed):
-                "Não há espaço livre suficiente. São necessários cerca de \(ByteCountFormatter.string(fromByteCount: needed, countStyle: .file))."
-            case .cancelled: "Importação cancelada. Nada foi alterado."
-            case .failed(let reason): "Não foi possível copiar a biblioteca: \(reason)"
+                "Not enough free space. About \(ByteCountFormatter.string(fromByteCount: needed, countStyle: .file)) is needed."
+            case .cancelled: "Import canceled. Nothing was changed."
+            case .failed(let reason): "Couldn't copy the library: \(reason)"
             }
         }
     }
@@ -166,7 +166,7 @@ enum ScribeLibraryImporter {
         let staging = destinationRoot.appending(path: stagingPrefix + runID, directoryHint: .isDirectory)
         // Held for the whole run; another import's cleanup skips any staging folder whose lock is held.
         guard let lock = RunLock(url: lockURL(forStagingNamed: staging.lastPathComponent, in: destinationRoot)) else {
-            throw ImportError.failed("Não foi possível reservar a área de importação.")
+            throw ImportError.failed("Couldn't reserve space for the import.")
         }
         defer { try? manager.removeItem(at: staging); lock.release() }
         var skippedLinks = 0

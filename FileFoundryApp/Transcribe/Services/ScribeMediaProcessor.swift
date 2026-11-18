@@ -108,11 +108,11 @@ enum ScribeMediaProcessor {
         case noAudio, cannotExport, unsupportedFormat, unreadableFile, emptyFile
         var errorDescription: String? {
             switch self {
-            case .unsupportedFormat: "Formato não compatível. Escolha um arquivo de áudio ou vídeo, como M4A, MP3, MP4, OGG, FLAC ou WAV."
-            case .unreadableFile: "Não foi possível abrir este arquivo. Copie-o para uma pasta local e tente novamente."
-            case .emptyFile: "Este arquivo está vazio. Escolha um arquivo com áudio."
-            case .noAudio: "O arquivo selecionado não contém áudio."
-            case .cannotExport: "Não foi possível preparar o áudio para transcrição."
+            case .unsupportedFormat: "Unsupported format. Choose an audio or video file, such as M4A, MP3, MP4, OGG, FLAC, or WAV."
+            case .unreadableFile: "Couldn't open this file. Copy it to a local folder and try again."
+            case .emptyFile: "This file is empty. Choose a file with audio."
+            case .noAudio: "The selected file doesn't contain audio."
+            case .cannotExport: "Couldn't prepare the audio for transcription."
             }
         }
     }

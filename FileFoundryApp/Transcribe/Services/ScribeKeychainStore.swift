@@ -83,7 +83,7 @@ enum ScribeKeychainStore {
     enum KeychainError: LocalizedError {
         case status(OSStatus)
         var errorDescription: String? {
-            switch self { case .status(let value): "Não foi possível salvar a chave no Keychain (\(value))." }
+            switch self { case .status(let value): "Couldn't save the key to the Keychain (\(value))." }
         }
     }
 }
