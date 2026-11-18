@@ -101,6 +101,11 @@ final class TranscribeStore: ObservableObject {
     /// Give it the title of the item whose folder it came from.
     private func repairRetryTitles() {
         var changed = false
+        // Older versions saved URLSession's raw "cancelled" text as the error.
+        for index in meetings.indices where meetings[index].errorMessage?.lowercased() == "cancelled" {
+            meetings[index].errorMessage = "Processing canceled. Try again whenever you are ready."
+            changed = true
+        }
         for index in meetings.indices where meetings[index].title.lowercased() == "source" {
             guard let original = meetings[index].originalPath else { continue }
             let folder = URL(filePath: original).deletingLastPathComponent().standardizedFileURL.path
