@@ -9,7 +9,10 @@ struct OrphanFinder: Sendable {
     static let denylist: [String] = [
         "com.apple", "group.com.apple", "com.junowoz.filefoundry", "com.google.keystone", "com.google.googleupdater",
         "com.microsoft.autoupdate", "com.microsoft.update", "com.microsoft.office", "com.adobe.acc", "com.adobe.crashreporter",
-        "org.sparkle-project", "org.cups", "com.openssh", "com.docker", "com.jetbrains.toolbox", "net.java"
+        "org.sparkle-project", "org.cups", "com.openssh", "com.docker", "com.jetbrains.toolbox", "net.java",
+        // Command-line developer tools: they have no app bundle, so they always look "orphaned".
+        "org.swift", "org.llvm", "org.python", "org.nodejs", "org.rust-lang", "org.golang", "sh.brew", "org.homebrew",
+        "org.cocoapods", "com.github.cli", "dev.bun", "io.pnpm", "com.npmjs", "org.ruby-lang", "com.vercel.cli", "dev.deno"
     ]
 
     func find(installedApps: [InstalledApp]) async throws -> [CleanupItem] {
