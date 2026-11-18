@@ -33,16 +33,16 @@ struct SidebarView: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
+            .padding(.horizontal, RackLayout.l)
+            .padding(.vertical, RackLayout.s)
             .frame(minHeight: 32)
-            .help("Choose which folders win when exact copies are found.")
+            .help("Choose which folders win when identical files are found.")
 
             Divider()
 
             ScanOptionsView(options: $viewModel.options)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
+                .padding(.horizontal, RackLayout.m)
+                .padding(.vertical, RackLayout.m)
         }
         .dropDestination(for: URL.self) { urls, _ in
             FolderPicker.drop(urls, into: viewModel)
@@ -63,11 +63,13 @@ enum FolderPicker {
         panel.canCreateDirectories = false
         panel.prompt = "Add Folder"
 
-        guard panel.runModal() == .OK else { return }
-        for url in panel.urls {
-            viewModel.addFolder(url)
+        panel.presentAsSheet { ok in
+            guard ok else { return }
+            for url in panel.urls {
+                viewModel.addFolder(url)
+            }
+            selection?.wrappedValue = panel.urls.first
         }
-        selection?.wrappedValue = panel.urls.first
     }
 
     /// Keeps only directories from a drop; files are ignored.

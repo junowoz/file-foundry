@@ -38,8 +38,8 @@ struct ScanProgressView: View {
         case .paused: "Scan paused"
         case .groupingBySize: "Grouping by size"
         case .partialHashing: "Sampling content"
-        case .fullHashing: "Hashing files"
-        case .byteComparing: "Comparing bytes"
+        case .fullHashing: "Checking contents"
+        case .byteComparing: "Comparing files"
         default: "Scanning folders"
         }
     }

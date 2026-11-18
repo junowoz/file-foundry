@@ -67,7 +67,7 @@ final class MainViewModelTests: XCTestCase {
 
             XCTAssertTrue(viewModel.selectedRemovalFileIDs.isEmpty)
             XCTAssertFalse(viewModel.canMoveSelectedFiles)
-            XCTAssertEqual(viewModel.statusMessage, "Run Exact matching before moving metadata matches to Trash.")
+            XCTAssertEqual(viewModel.statusMessage, "Switch to Identical Content before moving these matches to Trash.")
         }
     }
 

@@ -30,10 +30,10 @@ struct DuplicateGroupsView: View {
         }
         .overlay {
             if isDropTargeted {
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: RackLayout.cornerRadius)
                     .strokeBorder(Color.accentColor, style: StrokeStyle(lineWidth: 2, dash: [8, 6]))
-                    .background(Color.accentColor.opacity(0.06), in: RoundedRectangle(cornerRadius: 12))
-                    .padding(8)
+                    .background(Color.accentColor.opacity(0.06), in: RoundedRectangle(cornerRadius: RackLayout.cornerRadius))
+                    .padding(RackLayout.s)
                     .allowsHitTesting(false)
             }
         }
@@ -45,26 +45,28 @@ struct DuplicateGroupsView: View {
     @ViewBuilder
     private var emptyState: some View {
         if viewModel.folders.isEmpty {
-            EmptyStateView(
-                title: "Find duplicate files",
-                message: "Add or drop a folder to look for exact copies. Nothing is changed until you review and confirm.",
+            RackEmptyState(
                 symbol: "square.stack.3d.up",
-                actionTitle: "Add Folder",
-                action: addFolders
+                title: "Find Duplicate Files",
+                message: "Add a folder to find files with identical content. Nothing is removed until you confirm.",
+                primaryTitle: "Add Folder",
+                primaryAction: addFolders
             )
         } else if viewModel.scanState == .finished {
-            EmptyStateView(
-                title: "No duplicates found",
-                message: viewModel.statusMessage,
-                symbol: "checkmark.seal"
+            RackEmptyState(
+                symbol: "checkmark.seal",
+                title: "No Duplicates Found",
+                message: "No matching files were found in the selected folders."
             )
         } else {
-            EmptyStateView(
-                title: "Ready to scan",
-                message: "\(viewModel.folders.count) folder\(viewModel.folders.count == 1 ? "" : "s") selected. Adjust options in the sidebar, then scan.",
+            let count = viewModel.folders.count
+            RackEmptyState(
                 symbol: "magnifyingglass",
-                actionTitle: viewModel.canStartScan ? "Scan" : nil,
-                action: viewModel.canStartScan ? startScan : nil
+                title: "Ready to Scan",
+                message: "\(count) \(count == 1 ? "folder" : "folders") selected. Adjust the options in the sidebar, then scan.",
+                primaryTitle: viewModel.canStartScan ? "Scan" : nil,
+                primarySymbol: "play.fill",
+                primaryAction: viewModel.canStartScan ? startScan : nil
             )
         }
     }
@@ -82,8 +84,8 @@ struct DuplicateGroupsView: View {
                                 selectedRemovalCount: viewModel.selectedRemovalCount(in: group),
                                 selectedSavings: viewModel.selectedSavings(in: group)
                             )
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 8)
+                            .padding(.horizontal, RackLayout.l)
+                            .padding(.vertical, RackLayout.s)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .contentShape(Rectangle())
                         }
@@ -108,7 +110,7 @@ struct DuplicateGroupsView: View {
                             )
                         }
 
-                        Divider().padding(.top, 8)
+                        Divider().padding(.top, RackLayout.s)
                     }
                     .id(group.id)
                 }

@@ -9,7 +9,6 @@ struct ScanOptionsView: View {
             Section("Scan") {
                 Toggle("Include subfolders", isOn: $options.includeSubfolders)
                 Toggle("Ignore hidden files", isOn: $options.ignoreHiddenFiles)
-                Toggle("Ignore macOS packages", isOn: $options.ignorePackages)
                 Toggle("Ignore symlinks", isOn: $options.ignoreSymlinks)
 
                 TextField("Minimum file size", value: $options.minimumFileSize, format: .number)
@@ -22,11 +21,15 @@ struct ScanOptionsView: View {
             }
 
             Section("Match") {
-                Picker("Method", selection: $options.matchMode) {
-                    Text("Exact").tag(MatchMode.exactContent)
-                    Text("Metadata").tag(MatchMode.metadata)
+                Picker("Compare By", selection: $options.matchMode) {
+                    Text("Identical Content").tag(MatchMode.exactContent)
+                    Text("Matching Details").tag(MatchMode.metadata)
                 }
-                .pickerStyle(.segmented)
+
+                Text(matchHelp)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
 
                 Picker("Scope", selection: $options.searchScope) {
                     Text("Anywhere").tag(SearchScope.anywhere)
@@ -34,20 +37,14 @@ struct ScanOptionsView: View {
                     Text("Within each folder").tag(SearchScope.withinFolders)
                 }
 
-                if options.matchMode == .exactContent {
-                    LabeledContent("Verify") {
-                        Label("Byte-for-byte", systemImage: "checkmark.shield")
-                            .foregroundStyle(.blue)
-                    }
-                    .help("Byte-for-byte compares the complete contents after SHA-256 hashing.")
-                } else {
+                if options.matchMode == .metadata {
                     Toggle("Filename", isOn: criterionBinding(\.filename))
                     Toggle("Duration", isOn: criterionBinding(\.duration))
                     Toggle("File kind", isOn: criterionBinding(\.fileKind))
                     Toggle("File extension", isOn: criterionBinding(\.fileExtension))
 
                     if !options.metadataCriteria.hasSelection {
-                        Text("Select at least one field.")
+                        Text("Pick at least one detail.")
                             .font(.caption)
                             .foregroundStyle(.red)
                     }
@@ -55,6 +52,12 @@ struct ScanOptionsView: View {
             }
         }
         .formStyle(.grouped)
+    }
+
+    private var matchHelp: String {
+        options.matchMode == .exactContent
+            ? "Only files with identical content are matched."
+            : "Matches files by the details you pick. Contents are not compared, so check matches before moving anything."
     }
 
     private func criterionBinding(_ keyPath: WritableKeyPath<MetadataMatchCriteria, Bool>) -> Binding<Bool> {

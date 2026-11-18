@@ -59,7 +59,10 @@ struct DropZone: View {
         panel.canChooseFiles = true
         panel.canChooseDirectories = allowsDirectories
         panel.allowsMultipleSelection = true
-        if panel.runModal() == .OK, !panel.urls.isEmpty { onPick(panel.urls) }
+        panel.presentAsSheet { ok in
+            guard ok, !panel.urls.isEmpty else { return }
+            onPick(panel.urls)
+        }
     }
 }
 

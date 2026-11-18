@@ -21,7 +21,7 @@ struct DuplicateFileRowView: View {
             .contentShape(Rectangle())
             .disabled(!allowsRemoval)
             .accessibilityLabel(reviewState == .keep ? "Kept copy" : "Keep this copy")
-            .help(allowsRemoval ? "Keep this copy and mark the others for Trash" : "Verify with Exact matching before cleanup")
+            .help(allowsRemoval ? "Keep this copy and mark the others for Trash" : "Switch to Identical Content to remove copies")
 
             Button(action: selectFile) {
                 HStack(spacing: 10) {

@@ -10,11 +10,6 @@ struct SettingsView: View {
     var body: some View {
         Form {
             Section("Duplicate Finder") {
-            LabeledContent("Exact verification") {
-                Label("Byte-for-byte", systemImage: "checkmark.shield")
-                    .foregroundStyle(.blue)
-            }
-            Toggle("Include macOS packages", isOn: $viewModel.settings.includePackages)
             Button("Check for Updates") {
                 showUpdater = true
             }
