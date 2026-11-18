@@ -2,11 +2,6 @@ import AppKit
 import FileFoundryCore
 import SwiftUI
 
-extension Notification.Name {
-    /// Posted by the app menu's "Check for Updates…" item; the root view opens the update window.
-    static let fileFoundryCheckForUpdates = Notification.Name("fileFoundryCheckForUpdates")
-}
-
 enum FoundryModule: String, CaseIterable, Identifiable {
     case duplicates, organizer, media, transcribe, secondScreen
     var id: String { rawValue }
@@ -127,7 +122,7 @@ struct FileFoundryRootView: View {
         .sheet(isPresented: $showUpdater) {
             AppUpdateSheetView(viewModel: updateViewModel)
         }
-        .onReceive(NotificationCenter.default.publisher(for: .fileFoundryCheckForUpdates)) { _ in
+        .onReceive(NotificationCenter.default.publisher(for: .fileFoundryShowUpdater)) { _ in
             showUpdater = true
         }
         .task {
