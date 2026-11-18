@@ -48,8 +48,8 @@ struct RackEmptyState: View {
                 .accessibilityHidden(true)
             VStack(spacing: RackLayout.s) {
                 Text(title).font(.title2.weight(.semibold)).multilineTextAlignment(.center)
+                // No fixedSize here: inside the app's split view it caused a layout loop that blanked the window.
                 Text(message).font(.body).foregroundStyle(.secondary).multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
             }
             .frame(maxWidth: 420)
             if primaryAction != nil || secondaryAction != nil {
