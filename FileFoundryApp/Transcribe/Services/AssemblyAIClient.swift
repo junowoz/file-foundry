@@ -113,7 +113,7 @@ struct AssemblyAIClient {
             "messages": .array([
                 .object([
                     "role": .string("user"),
-                    "content": .string("Resuma esta reunião em português. Use seções curtas para: resumo executivo, decisões, pontos importantes e tarefas com responsáveis quando mencionados. Não invente informações.\n\nTRANSCRIÇÃO:\n\(transcriptText)")
+                    "content": .string("Summarize this meeting in the same language as the transcript. Use short sections for: summary, decisions, key points, and action items with owners when mentioned. Do not invent information.\n\nTRANSCRIPT:\n\(transcriptText)")
                 ])
             ])
         ]
