@@ -4,11 +4,8 @@ import SwiftUI
 /// App Updates: Homebrew casks, built-in updater apps and App Store apps in one list.
 /// Embed it in a rack or window; it checks on appear and keeps its own state.
 struct AppUpdatesView: View {
-    @StateObject private var model: AppUpdatesViewModel
-
-    init() {
-        _model = StateObject(wrappedValue: AppUpdatesViewModel())
-    }
+    /// Shared so a running `brew upgrade` stays visible (and cannot be doubled) when the tab is left and reopened.
+    @ObservedObject private var model = AppUpdatesViewModel.shared
 
     var body: some View {
         VStack(spacing: 0) {

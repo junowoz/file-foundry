@@ -137,6 +137,7 @@ final class AppCleanerModel: ObservableObject {
     @Published private(set) var orphansLoading = false
     @Published private(set) var orphansLoaded = false
     @Published private(set) var orphanChecked: Set<String> = []
+    @Published private(set) var orphanRefusals: [String: String] = [:]
 
     // Developer caches
     @Published private(set) var caches: [DevCache] = []
@@ -194,6 +195,10 @@ final class AppCleanerModel: ObservableObject {
         }
     }
 
+    func refusal(_ scope: CleanerScope, _ id: String) -> String? {
+        scope == .app ? refusals[id] : orphanRefusals[id]
+    }
+
     func setCacheChecked(_ id: String, on: Bool) {
         if on { cacheChecked.insert(id) } else { cacheChecked.remove(id) }
     }
@@ -232,28 +237,42 @@ final class AppCleanerModel: ObservableObject {
 
     func refreshRunning() { runningIDs = env.runningBundleIDs() }
 
-    func loadApps() {
+    @discardableResult
+    func loadApps() -> Task<Void, Never> {
         appsTask?.cancel()
         appsLoading = true
-        appsTask = Task {
+        let env = self.env
+        let task = Task { [weak self] in
             do {
                 let list = try await AppInventory.list(env: env)
                 if Task.isCancelled { return }
-                let keepSizes = Dictionary(uniqueKeysWithValues: apps.compactMap { app in app.size.map { (app.id, $0) } })
-                apps = list.map { var a = $0; a.size = keepSizes[a.id]; return a }
-                appsLoading = false
-                if let id = selectedAppID, !apps.contains(where: { $0.id == id }) { selectApp(nil) }
+                self?.applyAppList(list)
                 var buffer: [String: Int64] = [:]
                 // Sizes arrive one by one; publishing in batches avoids redrawing the list hundreds of times.
                 for await entry in AppInventory.sizeStream(for: list) {
                     if Task.isCancelled { return }
                     buffer[entry.id] = entry.size
-                    if buffer.count >= 12 { applySizes(buffer); buffer.removeAll() }
+                    if buffer.count >= 12 { self?.applySizes(buffer); buffer.removeAll() }
                 }
-                applySizes(buffer)
-            } catch { appsLoading = false }
-            appsLoading = false
+                self?.applySizes(buffer)
+            } catch {}
+            if !Task.isCancelled { self?.appsLoading = false }
         }
+        appsTask = task
+        return task
+    }
+
+    private func applyAppList(_ list: [InstalledApp]) {
+        let keepSizes = Dictionary(uniqueKeysWithValues: apps.compactMap { app in app.size.map { (app.id, $0) } })
+        apps = list.map { var a = $0; a.size = keepSizes[a.id]; return a }
+        appsLoading = false
+        if let id = selectedAppID, !apps.contains(where: { $0.id == id }) { selectApp(nil) }
+    }
+
+    /// Cancels every running scan; called when the rack goes away.
+    func cancelAll() {
+        appsTask?.cancel(); itemsTask?.cancel(); orphansTask?.cancel(); cachesTask?.cancel()
+        appsLoading = false; itemsLoading = false; orphansLoading = false; cachesLoading = false
     }
 
     private func applySizes(_ sizes: [String: Int64]) {
@@ -272,25 +291,29 @@ final class AppCleanerModel: ObservableObject {
         guard let app = selectedApp else { itemsLoading = false; return }
         itemsLoading = true
         let installed = apps
-        itemsTask = Task {
+        let env = self.env
+        itemsTask = Task { [weak self] in
             do {
                 let found = try await LeftoverFinder(env: env).find(app: app, installedApps: installed)
                 if Task.isCancelled { return }
                 let blocked = await Self.refusals(for: found, env: env, owner: app)
                 if Task.isCancelled { return }
+                guard let self else { return }
                 items = found
                 refusals = blocked
                 checked = Set(found.filter { $0.selectedByDefault && blocked[$0.id] == nil }.map(\.id))
             } catch {}
-            if !Task.isCancelled { itemsLoading = false }
+            if !Task.isCancelled { self?.itemsLoading = false }
         }
     }
 
-    func loadOrphans() {
+    /// `refreshApps` re-lists installed apps first so a just-restored app's data is not shown as a leftover.
+    func loadOrphans(refreshApps: Bool = false) {
         orphansTask?.cancel()
         orphansLoading = true
-        let installed = apps
-        orphansTask = Task {
+        let installed = refreshApps ? [] : apps
+        let env = self.env
+        orphansTask = Task { [weak self] in
             do {
                 var list = installed
                 if list.isEmpty { list = try await AppInventory.list(env: env) }
@@ -298,27 +321,30 @@ final class AppCleanerModel: ObservableObject {
                 if Task.isCancelled { return }
                 let blocked = await Self.refusals(for: found, env: env, owner: nil)
                 if Task.isCancelled { return }
+                guard let self else { return }
                 orphans = found
                 orphanChecked = []
-                refusals.merge(blocked) { $1 }
+                orphanRefusals = blocked
                 orphansLoaded = true
             } catch {}
-            if !Task.isCancelled { orphansLoading = false }
+            if !Task.isCancelled { self?.orphansLoading = false }
         }
     }
 
     func loadCaches() {
         cachesTask?.cancel()
         cachesLoading = true
-        cachesTask = Task {
+        let env = self.env
+        cachesTask = Task { [weak self] in
             do {
                 let found = try await DevCacheCatalog.scan(env: env)
                 if Task.isCancelled { return }
+                guard let self else { return }
                 caches = found
                 cacheChecked = cacheChecked.intersection(found.map(\.id))
                 cachesLoaded = true
             } catch {}
-            if !Task.isCancelled { cachesLoading = false }
+            if !Task.isCancelled { self?.cachesLoading = false }
         }
     }
 
@@ -362,41 +388,55 @@ final class AppCleanerModel: ObservableObject {
         let chosen = checkedItems
         guard !chosen.isEmpty else { return }
         let title = chosen.count == 1 && chosen[0].kind == .appBundle ? "Move \(app.name) to the Trash?" : "Move \(chosen.count) Items to the Trash?"
-        prepare(source: .app(app), label: "Uninstall \(app.name)", title: title, button: "Move to Trash", items: chosen, caches: [], owner: app)
+        Task { await prepare(source: .app(app), label: "Uninstall \(app.name)", title: title, button: "Move to Trash", items: chosen, caches: [], owner: app) }
     }
 
     func prepareOrphanRemoval() {
         let chosen = checkedOrphans
         guard !chosen.isEmpty else { return }
-        prepare(source: .orphans, label: "Remove Leftovers", title: "Move \(chosen.count) Items to the Trash?", button: "Move to Trash", items: chosen, caches: [], owner: nil)
+        Task { await prepare(source: .orphans, label: "Remove Leftovers", title: "Move \(chosen.count) Items to the Trash?", button: "Move to Trash", items: chosen, caches: [], owner: nil) }
     }
 
     func prepareCacheClear(_ list: [DevCache]) {
         guard !list.isEmpty else { return }
         let title = list.count == 1 ? "Clear \(list[0].tool)?" : "Clear \(list.count) Caches?"
         let label = list.count == 1 ? "Clear \(list[0].tool) Cache" : "Clear Developer Caches"
-        prepare(source: .caches, label: label, title: title, button: "Clear", items: [], caches: list, owner: nil)
+        Task { await prepare(source: .caches, label: label, title: title, button: "Clear", items: [], caches: list, owner: nil) }
     }
 
-    private func prepare(source: CleanerPending.Source, label: String, title: String, button: String,
-                         items: [CleanupItem], caches: [DevCache], owner: InstalledApp?) {
-        var allowed: [CleanupItem] = [], refused: [CleanerPending.Refusal] = []
+    private struct SafetyResult: Sendable {
+        var allowed: [CleanupItem] = []
         var allowedCaches: [DevCache] = []
+        var refused: [CleanerPending.Refusal] = []
         var running: String?
+    }
+
+    /// The safety checks touch the file system, so they run off the main actor.
+    private nonisolated static func safetyCheck(items: [CleanupItem], caches: [DevCache], owner: InstalledApp?,
+                                                env: CleanerEnvironment, home: String) async -> SafetyResult {
+        var out = SafetyResult()
         for item in items {
             switch CleanerSafety.check(item.url, env: env, owner: owner) {
-            case .allowed: allowed.append(item)
-            case .refused(let why): refused.append(.init(name: CleanerFormat.libraryName(item.url, home: home), message: why.message))
-            case .appRunning: running = owner?.name ?? "the app"
+            case .allowed: out.allowed.append(item)
+            case .refused(let why): out.refused.append(.init(name: CleanerFormat.libraryName(item.url, home: home), message: why.message))
+            case .appRunning: out.running = owner?.name ?? "the app"
             }
         }
         for cache in caches {
             switch CleanerSafety.check(cache.url, env: env, owner: nil) {
-            case .allowed: allowedCaches.append(cache)
-            case .refused(let why): refused.append(.init(name: cache.tool, message: why.message))
-            case .appRunning: running = cache.tool
+            case .allowed: out.allowedCaches.append(cache)
+            case .refused(let why): out.refused.append(.init(name: cache.tool, message: why.message))
+            case .appRunning: out.running = cache.tool
             }
         }
+        return out
+    }
+
+    private func prepare(source: CleanerPending.Source, label: String, title: String, button: String,
+                         items: [CleanupItem], caches: [DevCache], owner: InstalledApp?) async {
+        let checks = await Self.safetyCheck(items: items, caches: caches, owner: owner, env: env, home: home)
+        let allowed = checks.allowed, allowedCaches = checks.allowedCaches, refused = checks.refused
+        var running = checks.running
         if let owner, isRunning(owner) { running = owner.name }
         let notable = allowed
             .filter { $0.containsUserData || $0.allocatedSize >= Self.largeItem }
@@ -419,6 +459,8 @@ final class AppCleanerModel: ObservableObject {
         }
         pending = nil
         removing = false
+        let removedAppID: String? = { if case .app(let app) = p.source { return app.id } else { return nil } }()
+        let stillSelected = removedAppID != nil && selectedAppID == removedAppID
         problems = report.failures.map { "\($0.url.lastPathComponent): \(Self.describe($0.status))" }
         let moved = Set(report.outcomes.filter(\.succeeded).map { $0.url.path })
         items.removeAll { moved.contains($0.id) }
@@ -426,13 +468,19 @@ final class AppCleanerModel: ObservableObject {
         checked.subtract(moved); orphanChecked.subtract(moved)
         switch p.source {
         case .app(let app):
-            if moved.contains(app.url.path) { apps.removeAll { $0.id == app.id }; selectApp(nil) } else { selectApp(app.id, force: true) }
+            if moved.contains(app.url.path) {
+                apps.removeAll { $0.id == app.id }
+                if stillSelected { selectApp(nil) }
+            } else if stillSelected {
+                selectApp(app.id, force: true)
+            }
+            orphansLoaded = false
             notify(report, text: Self.appText(app.name, moved: moved.count))
         case .orphans:
             notify(report, text: moved.count == 1 ? "Moved 1 item to the Trash" : "Moved \(moved.count) items to the Trash")
         case .caches:
             loadCaches()
-            notify(report, text: "Cleared \(CleanerFormat.bytes(report.freedBytes)) from \(p.caches.count == 1 ? p.caches[0].tool : "\(p.caches.count) caches")")
+            notify(report, text: "Moved \(CleanerFormat.bytes(report.freedBytes)) of caches to the Trash. Empty the Trash to free the space.")
         }
         await reloadHistory()
         volumes = await Self.loadVolumes()
@@ -466,7 +514,7 @@ final class AppCleanerModel: ObservableObject {
         if !report.restored.isEmpty {
             loadApps()
             orphansLoaded = false; cachesLoaded = false
-            if mode == .leftovers { loadOrphans() }
+            if mode == .leftovers { loadOrphans(refreshApps: true) }
             if mode == .caches { loadCaches() }
             if let id = selectedAppID { selectApp(id, force: true) }
         }

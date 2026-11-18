@@ -13,7 +13,10 @@ final class AppUpdatesViewModel: ObservableObject {
     /// One-line note under the primary action (errors, "The app installs its own update.").
     @Published private(set) var message: String?
 
+    static let shared = AppUpdatesViewModel()
+
     private let checker: ThirdPartyUpdateChecker
+    private var refreshQueued = false
     private var upgradeTask: Task<Void, Never>?
 
     init(checker: ThirdPartyUpdateChecker = ThirdPartyUpdateChecker()) {
@@ -27,12 +30,18 @@ final class AppUpdatesViewModel: ObservableObject {
     }
 
     func refresh() async {
-        guard !isChecking else { return }
+        guard !isChecking else { refreshQueued = true; return }
         isChecking = true
         let result = await checker.check()
-        scan = result
-        if selectedEntry == nil { selectedID = result.entries.first?.id }
         isChecking = false
+        if !Task.isCancelled {
+            scan = result
+            if selectedEntry == nil { selectedID = result.entries.first?.id }
+        }
+        if refreshQueued, !Task.isCancelled {
+            refreshQueued = false
+            await refresh()
+        }
     }
 
     func performPrimaryAction(for entry: AppUpdateEntry) {
@@ -57,15 +66,23 @@ final class AppUpdatesViewModel: ObservableObject {
         upgradingID = entry.id
         logEntryID = entry.id
         log = "brew upgrade --cask \(token)\n"
+        // One serial stream keeps the log chunks in the order brew wrote them.
+        let (chunks, sink) = AsyncStream<String>.makeStream()
+        let reader = Task { [weak self] in
+            for await chunk in chunks { self?.appendLog(chunk) }
+        }
         upgradeTask = Task { [weak self] in
+            defer { sink.finish() }
             do {
-                try await AppUpdateActions.upgradeCask(token: token) { chunk in
-                    Task { @MainActor in self?.appendLog(chunk) }
-                }
+                try await AppUpdateActions.upgradeCask(token: token) { chunk in sink.yield(chunk) }
+                sink.finish()
+                await reader.value
                 self?.finishUpgrade(failure: nil)
             } catch is CancellationError {
+                sink.finish(); await reader.value
                 self?.finishUpgrade(failure: "Update cancelled.")
             } catch {
+                sink.finish(); await reader.value
                 self?.finishUpgrade(failure: error.localizedDescription)
             }
         }

@@ -195,13 +195,13 @@ struct CleanerItemList: View {
                 Section {
                     ForEach(group.items) { item in
                         CleanerItemRow(
-                            item: item, home: model.home, refusal: model.refusals[item.id],
+                            item: item, home: model.home, refusal: model.refusal(scope, item.id),
                             checked: Binding(get: { model.isChecked(scope, item.id) },
                                              set: { model.setChecked(scope, ids: [item.id], on: $0) }),
                             reveal: { model.reveal(item.url) })
                     }
                 } header: {
-                    let ids = group.items.filter { model.refusals[$0.id] == nil }.map(\.id)
+                    let ids = group.items.filter { model.refusal(scope, $0.id) == nil }.map(\.id)
                     let all = ids.allSatisfy { model.isChecked(scope, $0) }
                     HStack {
                         Text("\(group.kind.title) · \(CleanerFormat.bytes(group.total))")

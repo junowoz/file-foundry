@@ -97,7 +97,13 @@ private final class RunningProcess: @unchecked Sendable {
         lock.withLock {
             if timedOut { self.timedOut = true }
         }
-        if process.isRunning { process.terminate() }
+        guard process.isRunning else { return }
+        process.terminate()
+        // A process that ignores SIGTERM would leave the continuation waiting forever: escalate after 5 s.
+        let pid = process.processIdentifier
+        DispatchQueue.global().asyncAfter(deadline: .now() + 5) { [process] in
+            if process.isRunning { kill(pid, SIGKILL) }
+        }
     }
 
     private func attach(_ pipe: Pipe, collects: Bool, onOutput: (@Sendable (String) -> Void)?) {

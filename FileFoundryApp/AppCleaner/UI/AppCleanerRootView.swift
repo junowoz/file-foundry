@@ -28,6 +28,7 @@ struct AppCleanerRootView: View {
             CleanerConfirmSheet(model: model, pending: pending)
         }
         .task { await model.start() }
+        .onDisappear { model.cancelAll() }
         .task(id: model.mode) { model.ensureLoaded(for: model.mode) }
         .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didLaunchApplicationNotification)) { _ in model.refreshRunning() }
         .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didTerminateApplicationNotification)) { _ in model.refreshRunning() }

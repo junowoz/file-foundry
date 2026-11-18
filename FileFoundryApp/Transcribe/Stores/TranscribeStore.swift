@@ -16,6 +16,8 @@ final class TranscribeStore: ObservableObject {
     @Published private(set) var notice: Notice?
     private var pendingJobs: [@MainActor () async -> Void] = []
     private var activeMeetingID: UUID?
+    /// Meetings whose resume job is queued but has not started; marked cancelled if the queue is cleared.
+    private var queuedMeetingIDs: Set<UUID> = []
 
     private let recordingService = ScribeRecordingService()
     private var recordingTimer: Timer?
@@ -124,7 +126,7 @@ final class TranscribeStore: ObservableObject {
                 if pending.status == .summarizing, !pending.text.isEmpty {
                     retrySummary(pending)
                 } else if pending.transcriptID != nil {
-                    enqueue { [weak self] in await self?.resumeTranscript(pending) }
+                    enqueue(meetingID: pending.id) { [weak self] in await self?.resumeTranscript(pending) }
                 }
             }
         }
@@ -328,7 +330,7 @@ final class TranscribeStore: ObservableObject {
         }
     }
 
-    func enqueue(_ job: @escaping @MainActor () async -> Void) {
+    func enqueue(meetingID: UUID? = nil, _ job: @escaping @MainActor () async -> Void) {
         guard !importState.isRunning else {
             alertMessage = "Wait for the library import to finish before transcribing."
             return
@@ -337,6 +339,7 @@ final class TranscribeStore: ObservableObject {
             alertMessage = "The history couldn't be read. The original file was kept. Open the data folder and restore a valid copy of meetings.json before continuing."
             return
         }
+        if let meetingID { queuedMeetingIDs.insert(meetingID) }
         pendingJobs.append(job)
         queuedCount = pendingJobs.count
         startNextJob()
@@ -397,6 +400,8 @@ final class TranscribeStore: ObservableObject {
 
     func cancelActiveWork() {
         pendingJobs.removeAll(); queuedCount = 0
+        for id in queuedMeetingIDs { update(id) { $0.markProcessingCancelled() } }
+        queuedMeetingIDs.removeAll()
         activeTask?.cancel()
         if isRecording {
             isRecording = false; recordingTimer?.invalidate(); recordingTimer = nil
@@ -414,7 +419,7 @@ final class TranscribeStore: ObservableObject {
 
     func retry(_ meeting: Meeting) {
         guard requireAPIKey() else { return }
-        if meeting.transcriptID != nil { enqueue { [weak self] in await self?.resumeTranscript(meeting) } }
+        if meeting.transcriptID != nil { enqueue(meetingID: meeting.id) { [weak self] in await self?.resumeTranscript(meeting) } }
         else {
             let source = URL(filePath: meeting.sourcePath)
             guard isInsideLibrary(source) || isFingerprintedOriginal(meeting, path: meeting.sourcePath) else {
@@ -586,8 +591,11 @@ final class TranscribeStore: ObservableObject {
             else {
                 if !isInsideLibrary(sourceURL) { fingerprint = FileFingerprint.capture(path: sourceURL.path) }
                 let destination = directory.appending(path: "source.\(sourceURL.pathExtension.isEmpty ? "media" : sourceURL.pathExtension)")
-                try? fileManager.removeItem(at: destination)
-                try fileManager.copyItem(at: sourceURL, to: destination)
+                try await Task.detached(priority: .userInitiated) {
+                    let fm = FileManager.default
+                    try? fm.removeItem(at: destination)
+                    try fm.copyItem(at: sourceURL, to: destination)
+                }.value
                 // If the original changed while it was copied, it is not the file we imported: never offer to trash it.
                 if let captured = fingerprint, !captured.matches(path: sourceURL.path) { fingerprint = nil }
                 localSource = destination
@@ -693,6 +701,7 @@ final class TranscribeStore: ObservableObject {
 
     private func resumeTranscript(_ meeting: Meeting) async {
         guard meetings.contains(where: { $0.id == meeting.id }), let transcriptID = meeting.transcriptID, requireAPIKey() else { return }
+        queuedMeetingIDs.remove(meeting.id)
         activeMeetingID = meeting.id
         isBusy = true; activityText = "Resuming existing transcript…"
         update(meeting.id) { $0.status = .transcribing; $0.errorMessage = nil }
@@ -731,6 +740,11 @@ final class TranscribeStore: ObservableObject {
             }
             isBusy = false; activityText = ""
         } catch is CancellationError {
+            isBusy = false; activityText = ""
+        } catch where Task.isCancelled || (error as? URLError)?.code == .cancelled {
+            if let current = meetings.first(where: { $0.id == meeting.id }), current.status != .failed {
+                update(meeting.id) { $0.markProcessingCancelled() }
+            }
             isBusy = false; activityText = ""
         } catch {
             update(meeting.id) { $0.status = .failed; $0.errorMessage = error.localizedDescription }
