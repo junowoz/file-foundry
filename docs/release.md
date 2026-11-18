@@ -12,20 +12,18 @@ git tag v0.1.0
 git push origin v0.1.0
 ```
 
-The release workflow builds the app, embeds the updater helper, creates a ZIP, creates a guided DMG, generates SHA-256 checksums, and publishes a GitHub Release. DMG packaging uses `npx` to run the pinned `appdmg@0.6.6` layout tool.
+The release workflow builds the app, embeds the updater helper, creates a guided DMG, writes `SHA256SUMS`, and publishes a GitHub Release. DMG packaging uses `npx` to run the pinned `appdmg@0.6.6` layout tool.
 
 Release artifacts are Apple Silicon only. Ad-hoc signing is the default for local and CI builds unless `CODESIGN_IDENTITY` is set to a Developer ID Application identity. Gatekeeper-friendly public releases require Developer ID signing and notarization.
 
 The app requests no signing entitlements and is intentionally not App Sandboxed so Converter can launch a user-installed FFmpeg executable. Release validation must include `FILE_FOUNDRY_VERIFY_FFMPEG=1 ./dist/FileFoundry.app/Contents/MacOS/FileFoundry` on a Mac with FFmpeg installed.
 
-The in-app updater expects these release assets:
+A release has exactly three assets:
 
-- `FileFoundry.app.zip`
-- `FileFoundry.app.zip.sha256`
+- `FileFoundry.dmg`: the Mac app, used for manual downloads and by the in-app updater.
+- `FileFoundry-Android.apk`: the Second Screen Android app, uploaded after CI with `scripts/publish_android.sh <tag>`.
+- `SHA256SUMS`: one `shasum -a 256` line per asset. `publish_android.sh` adds the APK line.
 
-Manual downloads also include:
+The Mac updater downloads the DMG from the latest stable GitHub Release, checks it against `SHA256SUMS`, mounts it read-only, validates the `FileFoundry.app` bundle and installs through the embedded `FileFoundryUpdater.app` helper. The Android app checks the same release and installs `FileFoundry-Android.apk` through the system installer, which requires the same signing key.
 
-- `FileFoundry.dmg`
-- `FileFoundry.dmg.sha256`
-
-The updater downloads both assets from the latest stable GitHub Release, validates the checksum and extracted `FileFoundry.app` bundle, and installs through the embedded `FileFoundryUpdater.app` helper.
+Every tag needs its own section in `CHANGELOG.md`; the release notes are that section only.
