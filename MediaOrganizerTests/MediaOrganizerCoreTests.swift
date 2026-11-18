@@ -30,10 +30,11 @@ final class MediaOrganizerCoreTests: XCTestCase {
         XCTAssertNil(parser.parse("IMG_20241301.jpg"))
     }
 
-    func testTemplateDefaultInPortuguese() throws {
+    func testTemplateDefaultUsesSystemLocale() throws {
         let record = fixtureRecord(name: "IMG.jpg", components: DateComponents(year: 2024, month: 7, day: 2))
-        let value = try TemplateEngine().resolve(TemplateEngine.defaultTemplate, record: record, sourceFolder: "Origem")
-        XCTAssertEqual(value, "2024/07 - Julho")
+        let value = try TemplateEngine().resolve(TemplateEngine.defaultTemplate, record: record, sourceFolder: "Source")
+        XCTAssertTrue(value.hasPrefix("2024/07 - "))
+        XCTAssertGreaterThan(value.count, "2024/07 - ".count)
     }
 
     func testTemplateRejectsTraversalAndUnknownTokens() {
@@ -65,7 +66,7 @@ final class MediaOrganizerCoreTests: XCTestCase {
             let destination = try DestinationRoot(url: root)
             XCTAssertThrowsError(try FileSystemPolicy().validatedDestination(relativePath: "../escape", in: destination))
             XCTAssertThrowsError(try FileSystemPolicy().validatedDestination(relativePath: "/absolute", in: destination))
-            XCTAssertNoThrow(try FileSystemPolicy().validatedDestination(relativePath: "2024/01 - Janeiro/a.jpg", in: destination))
+            XCTAssertNoThrow(try FileSystemPolicy().validatedDestination(relativePath: "2024/01 - January/a.jpg", in: destination))
         }
     }
 
@@ -78,8 +79,8 @@ final class MediaOrganizerCoreTests: XCTestCase {
             MediaRecord(sourceRootID: source.id, sourceURL: record.sourceURL, relativePath: record.relativePath, filename: record.filename, fileSize: record.fileSize, modificationDate: record.modificationDate, kind: record.kind, captureMoment: record.captureMoment)
         }
         let plan = try ExportPlanner().makePlan(summary: ScanSummary(records: adjusted, duplicateGroups: []), sources: [source], template: TemplateEngine.defaultTemplate)
-        XCTAssertEqual(plan.items[0].destinationRelativePath, "Sem Data/Fotos/img.jpg")
-        XCTAssertEqual(plan.items[1].destinationRelativePath, "Sem Data/Fotos/IMG (2).JPG")
+        XCTAssertEqual(plan.items[0].destinationRelativePath, "Undated/Photos/img.jpg")
+        XCTAssertEqual(plan.items[1].destinationRelativePath, "Undated/Photos/IMG (2).JPG")
         XCTAssertEqual(plan.items[1].status, .renamedCollision)
     }
 
@@ -90,9 +91,9 @@ final class MediaOrganizerCoreTests: XCTestCase {
         let child = MediaRecord(sourceRootID: source.id, sourceURL: URL(fileURLWithPath: "/tmp/source/z.json"), relativePath: "z.json", filename: "z.json", fileSize: 1, modificationDate: nil, kind: .sidecar, captureMoment: moment)
         let reserved = MediaRecord(sourceRootID: source.id, sourceURL: URL(fileURLWithPath: "/tmp/source/photo.jpg"), relativePath: "photo.jpg", filename: "photo.jpg", fileSize: 1, modificationDate: nil, kind: .photo, captureMoment: moment)
 
-        let plan = try ExportPlanner().makePlan(summary: ScanSummary(records: [fileAtAncestor, child, reserved], duplicateGroups: []), sources: [source], template: "Relatórios/{YYYY}")
-        XCTAssertTrue(plan.items.allSatisfy { !$0.destinationRelativePath.lowercased().hasPrefix("relatórios/") })
-        XCTAssertTrue(plan.items.contains { $0.destinationRelativePath.hasPrefix("Conflitos de Estrutura/") })
+        let plan = try ExportPlanner().makePlan(summary: ScanSummary(records: [fileAtAncestor, child, reserved], duplicateGroups: []), sources: [source], template: "Reports/{YYYY}")
+        XCTAssertTrue(plan.items.allSatisfy { !$0.destinationRelativePath.lowercased().hasPrefix("reports/") })
+        XCTAssertTrue(plan.items.contains { $0.destinationRelativePath.hasPrefix("Structure Conflicts/") })
         let normalized = plan.items.map { $0.destinationRelativePath.lowercased() }
         for path in normalized {
             XCTAssertFalse(normalized.contains { $0 != path && ($0.hasPrefix(path + "/") || path.hasPrefix($0 + "/")) })
@@ -146,9 +147,9 @@ final class MediaOrganizerCoreTests: XCTestCase {
             XCTAssertEqual(try treeFingerprint(sourceURL), before)
             XCTAssertEqual(manifest.records.count, 3)
             XCTAssertTrue(manifest.records.allSatisfy { $0.status == .committedVerified && $0.sha256 != nil })
-            XCTAssertTrue(FileManager.default.fileExists(atPath: output.appendingPathComponent("2024/01 - Janeiro/IMG_20240115.jpg").path))
-            XCTAssertTrue(FileManager.default.fileExists(atPath: output.appendingPathComponent("Sem Data/Fotos/unknown.jpg").path))
-            XCTAssertTrue(FileManager.default.fileExists(atPath: output.appendingPathComponent("Relatórios/manifest.json").path))
+            XCTAssertTrue(FileManager.default.fileExists(atPath: output.appendingPathComponent("2024/01 - January/IMG_20240115.jpg").path))
+            XCTAssertTrue(FileManager.default.fileExists(atPath: output.appendingPathComponent("Undated/Photos/unknown.jpg").path))
+            XCTAssertTrue(FileManager.default.fileExists(atPath: output.appendingPathComponent("Reports/manifest.json").path))
         }
     }
 

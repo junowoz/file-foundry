@@ -3,23 +3,27 @@ import SwiftUI
 struct ReportView: View {
     let store: AppStore
     var body: some View {
-        ScrollView {
-        VStack(spacing: 20) {
-            Spacer()
-            Image(systemName: failureCount == 0 ? "checkmark.seal.fill" : "exclamationmark.triangle.fill")
-                .font(.system(size: 58)).foregroundStyle(failureCount == 0 ? .green : .orange)
-            Text(failureCount == 0 ? "Cópia organizada e verificada" : "Exportação concluída com atenção")
-                .font(.title).fontWeight(.semibold).multilineTextAlignment(.center)
-            Text(store.statusMessage).foregroundStyle(.secondary)
-            HStack(spacing: 24) {
-                reportMetric("Verificados", verifiedCount)
-                reportMetric("Falhas", failureCount)
-                reportMetric("Bytes", verifiedBytes.formatted(.byteCount(style: .file)))
-            }.padding(16).background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 12))
-            Button("Mostrar cópia no Finder") { store.revealOutput() }.buttonStyle(.borderedProminent)
-            Text("Manifest JSON, CSV e relatório Markdown estão na pasta Relatórios.").font(.caption).foregroundStyle(.secondary)
-            Spacer()
-        }.padding(24).frame(maxWidth: .infinity)
+        VStack(spacing: 0) {
+            ScrollView {
+                VStack(spacing: RackLayout.xl) {
+                    Image(systemName: failureCount == 0 ? "checkmark.seal.fill" : "exclamationmark.triangle.fill")
+                        .font(.system(size: 58)).foregroundStyle(failureCount == 0 ? .green : .orange)
+                    Text(failureCount == 0 ? "Organized copy created and verified" : "Export finished with issues")
+                        .font(.title).fontWeight(.semibold).multilineTextAlignment(.center)
+                    HStack(spacing: RackLayout.xl) {
+                        reportMetric("Verified", verifiedCount)
+                        reportMetric("Failed", failureCount)
+                        reportMetric("Size", verifiedBytes.formatted(.byteCount(style: .file)))
+                    }
+                    .padding(RackLayout.l)
+                    .foundryCard()
+                    Button("Show Copy in Finder") { store.revealOutput() }.buttonStyle(.borderedProminent)
+                    Text("The JSON manifest, CSV and Markdown reports are in the Reports folder.").font(.caption).foregroundStyle(.secondary)
+                }
+                .padding(RackLayout.xl)
+                .frame(maxWidth: .infinity)
+            }
+            RackStatusBar(status: store.statusMessage)
         }
     }
     private var verifiedCount: Int { store.manifest?.records.filter { $0.status == .committedVerified }.count ?? 0 }

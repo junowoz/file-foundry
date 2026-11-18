@@ -1,20 +1,20 @@
 import Foundation
 
 enum MediaKind: String, Codable, CaseIterable, Sendable {
-    case photo = "Foto"
+    case photo = "Photo"
     case rawPhoto = "RAW"
-    case video = "Vídeo"
-    case audio = "Áudio"
+    case video = "Video"
+    case audio = "Audio"
     case sidecar = "Sidecar"
-    case other = "Outro"
+    case other = "Other"
 
     var folderName: String {
         switch self {
-        case .photo, .rawPhoto: "Fotos"
-        case .video: "Vídeos"
-        case .audio: "Áudios"
+        case .photo, .rawPhoto: "Photos"
+        case .video: "Videos"
+        case .audio: "Audio"
         case .sidecar: "Sidecars"
-        case .other: "Outros"
+        case .other: "Other"
         }
     }
 }

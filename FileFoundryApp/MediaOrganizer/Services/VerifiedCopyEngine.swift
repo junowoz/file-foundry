@@ -7,9 +7,9 @@ enum VerifiedCopyError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .sourceChangedDuringCopy: "A origem mudou enquanto estava sendo copiada. O arquivo não foi finalizado."
-        case .hashMismatch: "A cópia não passou na verificação SHA-256."
-        case .insufficientSpace(let required, let available): "Espaço insuficiente: são necessários \(required) bytes e há \(available) bytes disponíveis."
+        case .sourceChangedDuringCopy: "The source changed while it was being copied. The file was not finished."
+        case .hashMismatch: "The copy didn't match its source checksum."
+        case .insufficientSpace(let required, let available): "Not enough space: \(required) bytes needed, \(available) bytes available."
         }
     }
 }
@@ -62,7 +62,7 @@ actor VerifiedCopyEngine {
                 guard committedHash == sourceHash else { throw VerifiedCopyError.hashMismatch }
                 manifest.records.append(CopyRecord(id: item.id, sourceRelativePath: item.record.relativePath, destinationRelativePath: item.destinationRelativePath, sha256: committedHash, bytes: item.record.fileSize, status: .committedVerified, error: nil))
             } catch is CancellationError {
-                manifest.records.append(CopyRecord(id: item.id, sourceRelativePath: item.record.relativePath, destinationRelativePath: item.destinationRelativePath, sha256: nil, bytes: item.record.fileSize, status: .cancelled, error: "Operação cancelada"))
+                manifest.records.append(CopyRecord(id: item.id, sourceRelativePath: item.record.relativePath, destinationRelativePath: item.destinationRelativePath, sha256: nil, bytes: item.record.fileSize, status: .cancelled, error: "Operation canceled"))
                 throw CancellationError()
             } catch {
                 manifest.records.append(CopyRecord(id: item.id, sourceRelativePath: item.record.relativePath, destinationRelativePath: item.destinationRelativePath, sha256: nil, bytes: item.record.fileSize, status: .failed, error: error.localizedDescription))
@@ -76,7 +76,7 @@ actor VerifiedCopyEngine {
 
     private func nextOutputRoot(parent: URL) throws -> URL {
         for index in 1...10_000 {
-            let name = index == 1 ? "File Foundry — Mídia organizada" : "File Foundry — Mídia organizada \(index)"
+            let name = index == 1 ? "File Foundry — Organized Media" : "File Foundry — Organized Media \(index)"
             let url = parent.appendingPathComponent(name, isDirectory: true)
             if !FileManager.default.fileExists(atPath: url.path) { return url }
         }

@@ -62,14 +62,14 @@ enum FileSystemPolicyError: LocalizedError, Equatable {
 
     var errorDescription: String? {
         switch self {
-        case .notFileURL: "A localização selecionada não é uma pasta local válida."
-        case .sourceDestinationOverlap: "A pasta de destino precisa ser totalmente separada das origens."
-        case .sourceOutsideAllowedRoots: "O arquivo não está dentro de uma origem autorizada."
-        case .destinationOutsideScope: "A operação tentou sair da pasta de destino autorizada."
-        case .pathTraversal: "O caminho contém componentes inseguros."
-        case .symbolicLink: "Links simbólicos não são seguidos por segurança."
-        case .notRegularFile: "O item não é um arquivo regular."
-        case .outputAlreadyExists: "O destino já existe e não será sobrescrito."
+        case .notFileURL: "The selected location isn't a valid local folder."
+        case .sourceDestinationOverlap: "The destination folder must be fully separate from the sources."
+        case .sourceOutsideAllowedRoots: "This file isn't inside an allowed source."
+        case .destinationOutsideScope: "The operation tried to leave the allowed destination folder."
+        case .pathTraversal: "The path contains unsafe components."
+        case .symbolicLink: "Symbolic links aren't followed, for safety."
+        case .notRegularFile: "This item isn't a regular file."
+        case .outputAlreadyExists: "The destination already exists and won't be overwritten."
         }
     }
 }

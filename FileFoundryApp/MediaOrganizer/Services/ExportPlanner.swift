@@ -21,16 +21,16 @@ struct ExportPlanner: Sendable {
             if let group {
                 let prefix = String(group.hash.prefix(8)).uppercased()
                 let groupIndex = (summary.duplicateGroups.firstIndex(where: { $0.id == group.id }) ?? 0) + 1
-                proposedDirectory = String(format: "Duplicados Exatos/Grupo %06d - %@", groupIndex, prefix)
+                proposedDirectory = String(format: "Exact Duplicates/Group %06d - %@", groupIndex, prefix)
                 baseStatus = .exactDuplicate
             } else if record.captureMoment == nil {
-                proposedDirectory = "Sem Data/\(record.kind.folderName)"
+                proposedDirectory = "Undated/\(record.kind.folderName)"
                 baseStatus = .undated
             } else if record.kind == .other || record.kind == .sidecar {
-                proposedDirectory = record.kind == .sidecar ? "Outros/Sidecars" : "Outros"
+                proposedDirectory = record.kind == .sidecar ? "Other/Sidecars" : "Other"
                 baseStatus = record.kind == .sidecar ? .sidecar : .other
             } else {
-                proposedDirectory = try templateEngine.resolve(template, record: record, sourceFolder: sourceNames[record.sourceRootID] ?? "Origem")
+                proposedDirectory = try templateEngine.resolve(template, record: record, sourceFolder: sourceNames[record.sourceRootID] ?? "Source")
                 baseStatus = .copy
             }
             let original = "\(proposedDirectory)/\(record.filename)"
@@ -63,7 +63,7 @@ struct ExportPlanner: Sendable {
     private func structuralFallback(for path: String, used: inout Set<String>, index: inout Int) -> String {
         let filename = (path as NSString).lastPathComponent
         while true {
-            let candidate = String(format: "Conflitos de Estrutura/Item %06d/%@", index, filename)
+            let candidate = String(format: "Structure Conflicts/Item %06d/%@", index, filename)
             index += 1
             let key = normalized(candidate)
             if !hasAncestorConflict(key, used: used), used.insert(key).inserted { return candidate }
@@ -79,7 +79,7 @@ struct ExportPlanner: Sendable {
     }
 
     private func isReserved(_ path: String) -> Bool {
-        let reserved = ["relatórios", ".file-foundry-staging"]
+        let reserved = ["reports", ".file-foundry-staging"]
         return reserved.contains { path == $0 || path.hasPrefix($0 + "/") }
     }
 }

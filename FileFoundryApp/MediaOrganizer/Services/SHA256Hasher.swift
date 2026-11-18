@@ -7,7 +7,7 @@ enum SHA256HasherError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .sizeChanged(let expected, let read):
-            "O arquivo mudou ou não pôde ser lido por completo (esperado: \(expected) bytes; lido: \(read))."
+            "The file changed or couldn't be read in full (expected \(expected) bytes; read \(read))."
         }
     }
 }

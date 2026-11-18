@@ -22,19 +22,20 @@ struct ContentView: View {
                 Label(error, systemImage: "exclamationmark.triangle.fill")
                     .foregroundStyle(.red)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
+                    .padding(.horizontal, RackLayout.l)
+                    .padding(.vertical, RackLayout.s)
                     .background(.red.opacity(0.08))
-                    .accessibilityLabel("Erro: \(error)")
+                    .accessibilityLabel("Error: \(error)")
             }
         }
+        .navigationTitle("Media Organizer")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Label("Somente cópia", systemImage: "lock.shield")
+                Label("Copy Only", systemImage: "lock.shield")
                     .foregroundStyle(.secondary)
             }
             ToolbarItem(placement: .primaryAction) {
-                Button("Media Organizer Settings", systemImage: "gearshape") { showSettings = true }
+                Button("Media Organizer Options", systemImage: "gearshape") { showSettings = true }
             }
         }
         .sheet(isPresented: $showSettings) { MediaOrganizerSettingsView(store: store) }
@@ -45,31 +46,31 @@ private struct WorkflowHeader: View {
     let step: WorkflowStep
 
     var body: some View {
-        HStack(spacing: 16) {
+        HStack(spacing: RackLayout.l) {
             ViewThatFits(in: .horizontal) {
                 fullStepper
                 compactStepper
             }
-            Spacer(minLength: 8)
-            Label("Originais protegidos", systemImage: "lock.shield")
+            Spacer(minLength: RackLayout.s)
+            Label("Originals protected", systemImage: "lock.shield")
                 .font(.caption)
                 .foregroundStyle(.green)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
+                .padding(.horizontal, RackLayout.s)
+                .padding(.vertical, RackLayout.xs)
                 .background(.green.opacity(0.12), in: Capsule())
                 .lineLimit(1)
                 .layoutPriority(-1)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
+        .padding(.horizontal, RackLayout.l)
+        .padding(.vertical, RackLayout.s)
         .background(.bar)
         .accessibilityElement(children: .contain)
     }
 
     private var fullStepper: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: RackLayout.s) {
             ForEach(WorkflowStep.allCases) { item in
-                HStack(spacing: 8) {
+                HStack(spacing: RackLayout.s) {
                     marker(for: item)
                     Text(item.title)
                         .font(.callout)
@@ -79,7 +80,7 @@ private struct WorkflowHeader: View {
                 }
                 .fixedSize()
                 .accessibilityElement(children: .combine)
-                .accessibilityLabel("\(item.title), passo \(item.rawValue + 1) de \(WorkflowStep.allCases.count)")
+                .accessibilityLabel("\(item.title), step \(item.rawValue + 1) of \(WorkflowStep.allCases.count)")
                 .accessibilityAddTraits(item == step ? .isSelected : [])
                 if item != WorkflowStep.allCases.last {
                     Capsule()
@@ -91,10 +92,10 @@ private struct WorkflowHeader: View {
     }
 
     private var compactStepper: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: RackLayout.s) {
             marker(for: step)
             Text(step.title).font(.callout.weight(.semibold))
-            Text("\(step.rawValue + 1) de \(WorkflowStep.allCases.count)")
+            Text("\(step.rawValue + 1) of \(WorkflowStep.allCases.count)")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .monospacedDigit()

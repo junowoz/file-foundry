@@ -7,11 +7,11 @@ enum WorkflowStep: Int, CaseIterable, Identifiable {
     var id: Int { rawValue }
     var title: String {
         switch self {
-        case .sources: "Fontes"
-        case .configure: "Configurar"
-        case .review: "Revisar"
-        case .copy: "Copiar"
-        case .report: "Relatório"
+        case .sources: "Sources"
+        case .configure: "Configure"
+        case .review: "Review"
+        case .copy: "Copy"
+        case .report: "Report"
         }
     }
 }
@@ -30,7 +30,7 @@ final class AppStore {
     var isWorking = false
     var progressCompleted = 0
     var progressTotal = 0
-    var statusMessage = "Adicione uma ou mais pastas para começar."
+    var statusMessage = "Add one or more folders to get started."
     var errorMessage: String?
     var outputURL: URL?
     var manifest: ExportManifest?
@@ -44,12 +44,14 @@ final class AppStore {
 
     func chooseSources() {
         let panel = NSOpenPanel()
-        panel.title = "Escolha as pastas de mídia"
-        panel.prompt = "Adicionar"
+        panel.title = "Choose Media Folders"
+        panel.prompt = "Add"
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = true
-        if panel.runModal() == .OK { addSourceURLs(panel.urls) }
+        panel.presentAsSheet { [self] ok in
+            if ok { addSourceURLs(panel.urls) }
+        }
     }
 
     func addSourceURLs(_ urls: [URL]) {
@@ -57,7 +59,7 @@ final class AppStore {
         for url in urls where (try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true {
             let canonical = url.standardizedFileURL.resolvingSymlinksInPath()
             if sources.contains(where: { contains($0.location.url, canonical) || contains(canonical, $0.location.url) }) {
-                errorMessage = "Esta pasta já está incluída por outra origem."
+                errorMessage = "This folder is already included in another source."
                 continue
             }
             do {
@@ -74,7 +76,7 @@ final class AppStore {
         }
         sources.sort { $0.location.url.path.localizedStandardCompare($1.location.url.path) == .orderedAscending }
         summary = nil; plan = nil
-        statusMessage = sources.isEmpty ? "Adicione uma ou mais pastas para começar." : "\(sources.count) pasta(s) pronta(s) para análise."
+        statusMessage = sources.isEmpty ? "Add one or more folders to get started." : "\(sources.count) folder(s) ready to scan."
     }
 
     func removeSource(_ source: SourceRoot) {
@@ -85,12 +87,13 @@ final class AppStore {
 
     func chooseDestination() {
         let panel = NSOpenPanel()
-        panel.title = "Escolha onde criar a biblioteca organizada"
-        panel.prompt = "Escolher"
+        panel.title = "Choose Where to Create the Organized Library"
+        panel.prompt = "Choose"
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.canCreateDirectories = true
-        if panel.runModal() == .OK, let url = panel.url {
+        panel.presentAsSheet { [self] ok in
+            guard ok, let url = panel.url else { return }
             do {
                 destinationParent?.url.stopAccessingSecurityScopedResource()
                 _ = url.startAccessingSecurityScopedResource()
@@ -109,7 +112,7 @@ final class AppStore {
 
     func scan() {
         guard !sources.isEmpty else { return }
-        errorMessage = nil; isWorking = true; statusMessage = "Analisando pastas sem escrever nas origens…"
+        errorMessage = nil; isWorking = true; statusMessage = "Scanning folders. Nothing in your sources is changed."
         operationTask = Task {
             do {
                 let result = try await scanner.scan(sources: sources, filesystemFallback: filesystemFallback)
@@ -120,9 +123,9 @@ final class AppStore {
                     try planner.makePlan(summary: result, sources: sources, template: template)
                 }.value
                 step = .configure
-                statusMessage = "Análise concluída: \(result.records.count) itens contabilizados."
+                statusMessage = "Scan complete: \(result.records.count) items found."
             } catch is CancellationError {
-                statusMessage = "Análise cancelada. Nenhuma origem foi alterada."
+                statusMessage = "Scan canceled. Nothing in your sources was changed."
             } catch { errorMessage = error.localizedDescription }
             isWorking = false
         }
@@ -138,15 +141,15 @@ final class AppStore {
 
     func review() {
         if let summary, !summary.isComplete, !acceptsIncompleteScan {
-            errorMessage = "A análise encontrou \(summary.enumerationErrorCount) erro(s) de acesso. Revise e confirme que deseja continuar com uma exportação incompleta."
+            errorMessage = "The scan hit \(summary.enumerationErrorCount) access error(s). Review them and confirm you want an incomplete export."
             return
         }
         guard let destinationParent, plan != nil else {
-            errorMessage = "Escolha uma pasta de destino válida antes de revisar."
+            errorMessage = "Choose a valid destination folder before reviewing."
             return
         }
         do {
-            let candidate = destinationParent.url.appendingPathComponent("File Foundry — Mídia organizada", isDirectory: true)
+            let candidate = destinationParent.url.appendingPathComponent("File Foundry — Organized Media", isDirectory: true)
             try policy.validateDisjoint(sources: sources, destination: DestinationRoot(url: candidate))
             step = .review
         } catch { errorMessage = error.localizedDescription }
@@ -156,7 +159,7 @@ final class AppStore {
         guard let plan, let destinationParent else { return }
         step = .copy; isWorking = true; errorMessage = nil
         progressCompleted = 0; progressTotal = plan.items.count
-        statusMessage = "Criando cópias e verificando SHA-256…"
+        statusMessage = "Copying files and verifying checksums…"
         operationTask = Task {
             do {
                 let (url, exportManifest) = try await copyEngine.export(plan: plan, sources: sources, destinationParent: destinationParent) { [weak self] completed, total in
@@ -167,9 +170,9 @@ final class AppStore {
                 }
                 outputURL = url; manifest = exportManifest; step = .report
                 let failures = exportManifest.records.filter { $0.status == .failed }.count
-                statusMessage = failures == 0 ? "Exportação concluída e verificada." : "Exportação concluída com \(failures) item(ns) para revisar."
+                statusMessage = failures == 0 ? "Export complete and verified." : "Export complete. \(failures) item(s) need review."
             } catch is CancellationError {
-                statusMessage = "Exportação cancelada. Cópias já verificadas foram preservadas."
+                statusMessage = "Export canceled. Verified copies were kept."
             } catch { errorMessage = error.localizedDescription }
             isWorking = false
         }
