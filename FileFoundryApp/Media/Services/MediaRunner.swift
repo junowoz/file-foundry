@@ -126,7 +126,11 @@ enum MediaRunner {
             if plan.usesZip {
                 try await zip(input: input, output: staged, handle: handle, progress: progress)
             } else if plan.imageTargetBytes != nil {
-                try await searchImage(plan: plan, input: input, output: staged, tempDir: tempDir, handle: handle, progress: progress)
+                for step in plan.steps where step.tool == .decode {
+                    progress(ProgressUpdate(fraction: nil, label: step.label))
+                    try await decode(step)
+                }
+                try await searchImage(plan: plan, input: plan.decodedInput ?? input, output: staged, tempDir: tempDir, handle: handle, progress: progress)
             } else {
                 var done = 0.0
                 for step in plan.steps {
@@ -139,6 +143,8 @@ enum MediaRunner {
                         }
                     case .sips:
                         try await runTool(URL(fileURLWithPath: "/usr/bin/sips"), step.arguments, handle: handle, name: "sips")
+                    case .decode:
+                        try await decode(step)
                     }
                     done += step.weight
                 }
@@ -156,6 +162,15 @@ enum MediaRunner {
         let outcome = try await ProcessRunner.run(executable, arguments, handle: handle)
         if outcome.cancelled { throw CancellationError() }
         guard outcome.succeeded else { throw ToolError.failed(outcome.stderrTail.isEmpty ? "\(name) failed." : outcome.stderrTail) }
+    }
+
+    /// In-process macOS decode (arguments: input, output). Fast, so cancellation is checked around it.
+    private static func decode(_ step: CompressionStep) async throws {
+        guard step.arguments.count == 2 else { throw ToolError.failed("Invalid decode step.") }
+        try Task.checkCancellation()
+        let input = URL(fileURLWithPath: step.arguments[0]), output = URL(fileURLWithPath: step.arguments[1])
+        try await Task.detached(priority: .userInitiated) { try SystemImage.decodeToPNG(input: input, output: output) }.value
+        try Task.checkCancellation()
     }
 
     private static func zip(input: URL, output: URL, handle: ProcessHandle, progress: @Sendable (ProgressUpdate) -> Void) async throws {

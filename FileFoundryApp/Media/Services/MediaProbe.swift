@@ -43,6 +43,8 @@ struct MediaInfo: Equatable, Sendable {
     var audioCodec: String?
     var audioBitrate: Int?
     var totalBitrate: Int?
+    /// Still image that macOS decodes (HEIC, RAW, AVIF…); ffmpeg steps read a PNG decoded from it first.
+    var systemDecode = false
     var hasAudio: Bool { audioCodec != nil }
 
     static let other = MediaInfo()
@@ -101,6 +103,12 @@ enum MediaProbe {
 
     /// Runs ffprobe off the main thread. Unreadable or non-media files come back as `.other`.
     static func probe(_ url: URL) async -> MediaInfo {
+        let probed = await ffprobe(url)
+        let system = await Task.detached(priority: .userInitiated) { SystemImage.info(url) }.value
+        return SystemImage.merge(probed: probed, system: system)
+    }
+
+    private static func ffprobe(_ url: URL) async -> MediaInfo {
         guard let ffprobe = ToolLocator.locate("ffprobe") else { return .other }
         let sink = LineTail(limit: 100_000)
         let outcome = try? await ProcessRunner.run(ffprobe, probeArguments(for: url)) { sink.append($0) }

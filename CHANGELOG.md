@@ -2,6 +2,14 @@
 
 All notable changes to File Foundry will be documented in this file.
 
+## [1.5.0] - 2026-11-18
+
+### Added
+
+- Convert & Compress: images convert like video and audio. Photos convert to JPEG, PNG, HEIC, TIFF, GIF and BMP (and WebP when FFmpeg supports it).
+- iPhone HEIC/HEIF photos, RAW camera files, AVIF and JPEG 2000 are recognised as images instead of plain files, read by macOS at full resolution with the right orientation.
+- Image conversions use macOS itself, so they work even without FFmpeg installed, and keep colour profiles and photo metadata.
+
 ## [1.4.2] - 2026-11-18
 
 ### Changed

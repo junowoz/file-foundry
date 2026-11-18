@@ -106,6 +106,7 @@ final class MediaModel {
             command = ""
         } else {
             command = plan.steps.map { step in
+                if step.tool == .decode { return "# macOS reads the image: \(step.arguments.joined(separator: " → "))" }
                 let exe = step.tool == .sips ? "/usr/bin/sips" : (ToolLocator.locate("ffmpeg")?.path ?? "ffmpeg")
                 return ([exe] + step.arguments).map { $0.contains(" ") ? "\"\($0)\"" : $0 }.joined(separator: " ")
             }.joined(separator: "\n")
@@ -150,10 +151,6 @@ final class MediaModel {
     private func run(_ item: MediaItem) async {
         let id = item.id
         guard let s = settings[item.kind] else { queue.fail(id, message: "Missing settings."); return }
-        let needsFFmpeg = item.kind != .other
-        if needsFFmpeg, ToolLocator.locate("ffmpeg") == nil {
-            queue.fail(id, message: ToolError.toolMissing("FFmpeg").localizedDescription); return
-        }
         let tempDir: URL
         do { tempDir = try PrivateTemp.make() } catch { queue.fail(id, message: error.localizedDescription); return }
         let passLog = tempDir.appendingPathComponent("pass").path
@@ -170,6 +167,11 @@ final class MediaModel {
         if let problem = plan.problem {
             try? FileManager.default.removeItem(at: tempDir)
             queue.fail(id, message: problem); return
+        }
+        // Image conversions run on macOS alone; only ffmpeg steps need FFmpeg installed.
+        if plan.needsFFmpeg, ToolLocator.locate("ffmpeg") == nil {
+            try? FileManager.default.removeItem(at: tempDir)
+            queue.fail(id, message: ToolError.toolMissing("FFmpeg").localizedDescription); return
         }
         handle = ProcessHandle()
         let handle = self.handle

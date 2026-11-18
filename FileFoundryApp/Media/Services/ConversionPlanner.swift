@@ -4,7 +4,7 @@ import Foundation
 enum ConverterPreset: String, CaseIterable, Identifiable, Sendable {
     case videoH264, videoHEVC, videoWebM, videoGIF
     case audioMP3, audioAAC, audioWAV, audioFLAC, audioOpus
-    case imageJPEG, imagePNG, imageWebP, imageHEIC
+    case imageJPEG, imagePNG, imageWebP, imageHEIC, imageTIFF, imageGIF, imageBMP
 
     enum Group: String, CaseIterable, Sendable { case video = "Video", audio = "Audio", image = "Image" }
 
@@ -14,7 +14,7 @@ enum ConverterPreset: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .videoH264, .videoHEVC, .videoWebM, .videoGIF: .video
         case .audioMP3, .audioAAC, .audioWAV, .audioFLAC, .audioOpus: .audio
-        case .imageJPEG, .imagePNG, .imageWebP, .imageHEIC: .image
+        case .imageJPEG, .imagePNG, .imageWebP, .imageHEIC, .imageTIFF, .imageGIF, .imageBMP: .image
         }
     }
 
@@ -33,6 +33,9 @@ enum ConverterPreset: String, CaseIterable, Identifiable, Sendable {
         case .imagePNG: "PNG"
         case .imageWebP: "WebP"
         case .imageHEIC: "HEIC"
+        case .imageTIFF: "TIFF"
+        case .imageGIF: "GIF"
+        case .imageBMP: "BMP"
         }
     }
 
@@ -52,6 +55,9 @@ enum ConverterPreset: String, CaseIterable, Identifiable, Sendable {
         case .imagePNG: "png"
         case .imageWebP: "webp"
         case .imageHEIC: "heic"
+        case .imageTIFF: "tiff"
+        case .imageGIF: "gif"
+        case .imageBMP: "bmp"
         }
     }
 
@@ -70,10 +76,13 @@ enum ConverterPreset: String, CaseIterable, Identifiable, Sendable {
         case .imagePNG: "Lossless"
         case .imageWebP: "Small files for the web"
         case .imageHEIC: "Small files, Apple devices"
+        case .imageTIFF: "Lossless, for print and editing"
+        case .imageGIF: "Still image, 256 colours"
+        case .imageBMP: "Uncompressed bitmap"
         }
     }
 
-    /// ffmpeg encoder this preset needs. nil for HEIC, which uses the system `sips` tool.
+    /// ffmpeg encoder this preset needs. nil for presets that use the system `sips` tool.
     var requiredEncoder: String? {
         switch self {
         case .videoH264: "libx264"
@@ -85,14 +94,14 @@ enum ConverterPreset: String, CaseIterable, Identifiable, Sendable {
         case .audioWAV: "pcm_s16le"
         case .audioFLAC: "flac"
         case .audioOpus: "libopus"
-        case .imageJPEG: "mjpeg"
-        case .imagePNG: "png"
         case .imageWebP: "libwebp"
-        case .imageHEIC: nil
+        case .imageJPEG, .imagePNG, .imageHEIC, .imageTIFF, .imageGIF, .imageBMP: nil
         }
     }
 
-    var usesSips: Bool { self == .imageHEIC }
+    /// Still images (except WebP, which macOS can't write) go through macOS ImageIO via `sips`: it reads HEIC grids,
+    /// RAW and AVIF, keeps colour profiles and metadata, and applies orientation where the format has no EXIF.
+    var usesSips: Bool { group == .image && self != .imageWebP }
 
     /// ffmpeg output arguments (between `-i <input>` and the output path). Never contains `-y`.
     var arguments: [String] {
@@ -108,10 +117,13 @@ enum ConverterPreset: String, CaseIterable, Identifiable, Sendable {
         case .audioWAV: return ["-vn", "-c:a", "pcm_s16le"]
         case .audioFLAC: return ["-vn", "-c:a", "flac"]
         case .audioOpus: return ["-vn", "-c:a", "libopus", "-b:a", "160k"]
-        case .imageJPEG: return ["-frames:v", "1", "-c:v", "mjpeg", "-q:v", "2", "-pix_fmt", "yuvj420p"]
-        case .imagePNG: return ["-frames:v", "1", "-compression_level", "6"]
+        case .imageJPEG: return ["-s", "format", "jpeg", "-s", "formatOptions", "90"]
+        case .imagePNG: return ["-s", "format", "png"]
         case .imageWebP: return ["-frames:v", "1", "-c:v", "libwebp", "-quality", "90"]
         case .imageHEIC: return ["-s", "format", "heic", "-s", "formatOptions", "85"]
+        case .imageTIFF: return ["-s", "format", "tiff"]
+        case .imageGIF: return ["-s", "format", "gif"]
+        case .imageBMP: return ["-s", "format", "bmp"]
         }
     }
 
@@ -121,7 +133,7 @@ enum ConverterPreset: String, CaseIterable, Identifiable, Sendable {
         switch kind {
         case .video: all = [.videoH264, .videoHEVC, .videoWebM, .videoGIF, .audioMP3, .audioAAC, .audioWAV, .audioFLAC]
         case .audio: all = [.audioMP3, .audioAAC, .audioWAV, .audioFLAC, .audioOpus]
-        case .image: all = [.imageJPEG, .imagePNG, .imageHEIC, .imageWebP]
+        case .image: all = [.imageJPEG, .imagePNG, .imageHEIC, .imageWebP, .imageTIFF, .imageGIF, .imageBMP]
         case .other: all = []
         }
         return all.filter { preset in preset.requiredEncoder.map(capabilities.has) ?? true }
@@ -138,20 +150,29 @@ enum ConverterPreset: String, CaseIterable, Identifiable, Sendable {
 
 enum ConversionPlanner {
     static func make(preset: ConverterPreset, info: MediaInfo, input: URL, output: URL) -> CompressionPlan {
-        let step: CompressionStep
+        var steps: [CompressionStep] = []
+        var decodedInput: URL?
         if preset.usesSips {
-            step = CompressionStep(label: "Converting", arguments: preset.arguments + [input.path, "--out", output.path], weight: 1, tool: .sips)
+            steps = [CompressionStep(label: "Converting to \(preset.shortTitle)",
+                                     arguments: preset.arguments + [input.path, "--out", output.path], weight: 1, tool: .sips)]
         } else {
-            step = CompressionStep(
+            var source = input
+            if preset.group == .image, let decode = SystemDecode.step(info: info, input: input, output: output) {
+                steps.append(decode.step)
+                source = decode.decoded
+                decodedInput = decode.decoded
+            }
+            steps.append(CompressionStep(
                 label: "Converting to \(preset.shortTitle)",
-                arguments: FFmpegRunner.baseArguments + ["-n"] + FFmpegRunner.inputArguments(input) + preset.arguments + [output.path], weight: 1)
+                arguments: FFmpegRunner.baseArguments + ["-n"] + FFmpegRunner.inputArguments(source) + preset.arguments + [output.path], weight: 1))
         }
         var problem: String?
         if preset.group == .audio, info.kind == .video, !info.hasAudio { problem = "This video has no audio track." }
+        if preset.usesSips, info.kind != .image { problem = "Image formats need an image as the source." }
         return CompressionPlan(
             kind: info.kind, summary: "\(preset.shortTitle) · \(preset.detail)", outputExtension: preset.fileExtension,
-            steps: [step], notes: [], problem: problem, imageTargetBytes: nil, targetBytes: nil, imageSettings: nil,
-            duration: info.duration > 0 ? info.duration : nil)
+            steps: steps, notes: [], problem: problem, imageTargetBytes: nil, targetBytes: nil, imageSettings: nil,
+            duration: info.duration > 0 ? info.duration : nil, decodedInput: decodedInput)
     }
 }
 

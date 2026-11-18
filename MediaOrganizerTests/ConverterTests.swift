@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import XCTest
 @testable import FileFoundry
@@ -179,5 +180,103 @@ final class ConverterTests: XCTestCase {
         XCTAssertEqual(s.targetBytes(original: 8_000_000), 25_000_000)
         s.targetText = ""
         XCTAssertTrue(s.targetIsBlank)
+    }
+
+    // MARK: Images
+
+    private func makeImage(_ name: String, format: String) throws -> URL {
+        let dir = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("ff-img-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let png = dir.appendingPathComponent("src.png")
+        let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 64, pixelsHigh: 32, bitsPerSample: 8, samplesPerPixel: 4,
+                                   hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)!
+        try XCTUnwrap(rep.representation(using: .png, properties: [:])).write(to: png)
+        if format == "png" { return png }
+        let out = dir.appendingPathComponent(name)
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/usr/bin/sips")
+        p.arguments = ["-s", "format", format, png.path, "--out", out.path]
+        p.standardOutput = FileHandle.nullDevice; p.standardError = FileHandle.nullDevice
+        try p.run(); p.waitUntilExit()
+        return out
+    }
+
+    func testHEICIsReadByMacOSAsAnImage() throws {
+        let heic = try makeImage("photo.HEIC", format: "heic")
+        let system = try XCTUnwrap(SystemImage.info(heic))
+        XCTAssertEqual(system.kind, .image)
+        XCTAssertEqual(system.width, 64)
+        XCTAssertEqual(system.videoCodec, "heic")
+        // ffprobe sees HEVC tiles in an MP4 container; the macOS reading wins and is decoded by macOS.
+        var probed = MediaInfo(); probed.kind = .other; probed.videoCodec = "hevc"
+        let merged = SystemImage.merge(probed: probed, system: system)
+        XCTAssertEqual(merged.kind, .image)
+        XCTAssertTrue(merged.systemDecode)
+    }
+
+    func testFFmpegReadableImagesKeepTheProbe() {
+        var probed = MediaInfo(); probed.kind = .image; probed.videoCodec = "png"; probed.width = 10
+        var system = MediaInfo(); system.kind = .image; system.videoCodec = "png"
+        XCTAssertEqual(SystemImage.merge(probed: probed, system: system), probed)
+        XCTAssertEqual(SystemImage.merge(probed: probed, system: nil), probed)
+    }
+
+    func testGIFAndNonImagesAreLeftToFFprobe() {
+        XCTAssertFalse(SystemImage.isStillImageType(URL(fileURLWithPath: "/tmp/a.gif")))
+        XCTAssertFalse(SystemImage.isStillImageType(URL(fileURLWithPath: "/tmp/a.mov")))
+        XCTAssertTrue(SystemImage.isStillImageType(URL(fileURLWithPath: "/tmp/a.dng")))
+        XCTAssertTrue(SystemImage.isStillImageType(URL(fileURLWithPath: "/tmp/a.avif")))
+    }
+
+    func testStillImageFormatsUseSipsAndNeedNoFFmpeg() {
+        var image = MediaInfo(); image.kind = .image; image.systemDecode = true
+        let input = URL(fileURLWithPath: "/tmp/in.heic")
+        for preset in [ConverterPreset.imageJPEG, .imagePNG, .imageHEIC, .imageTIFF, .imageGIF, .imageBMP] {
+            let plan = ConversionPlanner.make(preset: preset, info: image, input: input, output: URL(fileURLWithPath: "/tmp/t/o.x"))
+            XCTAssertEqual(plan.steps.map(\.tool), [.sips], preset.rawValue)
+            XCTAssertFalse(plan.needsFFmpeg, preset.rawValue)
+            XCTAssertNil(plan.problem)
+        }
+        let lean = EncoderCapabilities(encoders: ["libx264"])
+        XCTAssertEqual(Set(ConverterPreset.available(for: .image, capabilities: lean)),
+                       [.imageJPEG, .imagePNG, .imageHEIC, .imageTIFF, .imageGIF, .imageBMP])
+    }
+
+    func testWebPFromHEICDecodesFirst() {
+        var image = MediaInfo(); image.kind = .image; image.systemDecode = true
+        let plan = ConversionPlanner.make(preset: .imageWebP, info: image, input: URL(fileURLWithPath: "/tmp/in.heic"),
+                                          output: URL(fileURLWithPath: "/tmp/job/output.webp"))
+        XCTAssertEqual(plan.steps.map(\.tool), [.decode, .ffmpeg])
+        XCTAssertEqual(plan.decodedInput?.path, "/tmp/job/decoded-source.png")
+        XCTAssertTrue(plan.steps[1].arguments.contains("/tmp/job/decoded-source.png"))
+        XCTAssertFalse(plan.steps[1].arguments.contains("/tmp/in.heic"))
+    }
+
+    func testImageCompressionFromHEICDecodesFirst() {
+        var image = MediaInfo(); image.kind = .image; image.systemDecode = true
+        let request = CompressionRequest(info: image, originalBytes: 1_000_000, mode: .targetSize, targetBytes: 300_000,
+                                         codec: .h264, preset: .balanced, image: ImageSettings())
+        let plan = CompressionPlanner.make(request: request, input: URL(fileURLWithPath: "/tmp/in.heic"),
+                                           output: URL(fileURLWithPath: "/tmp/job/output.jpg"), passLog: "/tmp/job/p")
+        XCTAssertEqual(plan.steps.first?.tool, .decode)
+        XCTAssertEqual(plan.decodedInput?.lastPathComponent, "decoded-source.png")
+        XCTAssertTrue(plan.needsFFmpeg)
+    }
+
+    func testDecodeAndConvertRealHEIC() async throws {
+        let heic = try makeImage("photo.heic", format: "heic")
+        let dir = heic.deletingLastPathComponent()
+        let decoded = dir.appendingPathComponent("decoded.png")
+        try SystemImage.decodeToPNG(input: heic, output: decoded)
+        XCTAssertEqual(SystemImage.info(decoded)?.width, 64)
+
+        var info = try XCTUnwrap(SystemImage.info(heic)); info.systemDecode = true
+        let temp = try PrivateTemp.make()
+        let staged = MediaRunner.stagedURL(tempDir: temp, ext: "jpg")
+        let plan = ConversionPlanner.make(preset: .imageJPEG, info: info, input: heic, output: staged)
+        let result = try await MediaRunner.run(plan: plan, originalBytes: 1, input: heic, output: dir.appendingPathComponent("photo (converted).jpg"),
+                                               tempDir: temp, handle: ProcessHandle()) { _ in }
+        XCTAssertEqual(SystemImage.info(result.outputURL)?.videoCodec, "mjpeg")
+        try? FileManager.default.removeItem(at: dir)
     }
 }

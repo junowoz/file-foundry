@@ -122,7 +122,8 @@ enum BitratePlanner {
     }
 }
 
-enum StepTool: Equatable, Sendable { case ffmpeg, sips }
+/// `decode` runs in-process: macOS writes the image as an oriented PNG (arguments: input, output).
+enum StepTool: Equatable, Sendable { case ffmpeg, sips, decode }
 
 struct CompressionStep: Equatable, Sendable {
     var label: String
@@ -156,7 +157,10 @@ struct CompressionPlan: Equatable, Sendable {
     var imageSettings: ImageSettings?
     /// Source duration used for progress; nil when unknown.
     var duration: Double?
+    /// PNG decoded by macOS that ffmpeg steps read instead of the original; nil when ffmpeg reads the original.
+    var decodedInput: URL?
     var usesZip: Bool { kind == .other }
+    var needsFFmpeg: Bool { imageTargetBytes != nil || steps.contains { $0.tool == .ffmpeg } }
 }
 
 enum CompressionPlanner {
@@ -292,6 +296,8 @@ enum CompressionPlanner {
 
     private static func image(_ r: CompressionRequest, input: URL, output: URL) -> CompressionPlan {
         let s = r.image
+        let decode = SystemDecode.step(info: r.info, input: input, output: output)
+        let input = decode?.decoded ?? input
         var problem: String?
         var summary = "\(s.format.title) · quality \(s.quality)"
         if let m = s.maxDimension { summary += " · max \(m) px" }
@@ -300,10 +306,13 @@ enum CompressionPlanner {
             summary = "\(s.format.title) · up to 6 trial encodes to fit \(ByteFormat.string(r.targetBytes))"
         }
         let step = CompressionStep(label: "Encoding", arguments: imageArguments(input: input, output: output, settings: s, quality: s.quality), weight: 1)
-        return CompressionPlan(kind: .image, summary: summary, outputExtension: s.format.fileExtension, steps: [step],
-                               notes: [], problem: problem,
-                               imageTargetBytes: r.mode == .targetSize ? r.targetBytes : nil,
-                               targetBytes: r.mode == .targetSize ? r.targetBytes : nil)
+        var plan = CompressionPlan(kind: .image, summary: summary, outputExtension: s.format.fileExtension,
+                                   steps: (decode.map { [$0.step] } ?? []) + [step],
+                                   notes: [], problem: problem,
+                                   imageTargetBytes: r.mode == .targetSize ? r.targetBytes : nil,
+                                   targetBytes: r.mode == .targetSize ? r.targetBytes : nil)
+        plan.decodedInput = decode?.decoded
+        return plan
     }
 }
 
@@ -334,5 +343,14 @@ enum OutputNaming {
             n += 1
         }
         return candidate
+    }
+}
+
+/// The macOS decode step that runs before ffmpeg for images ffmpeg can't read whole (HEIC grids, RAW, AVIF…).
+enum SystemDecode {
+    static func step(info: MediaInfo, input: URL, output: URL) -> (step: CompressionStep, decoded: URL)? {
+        guard info.kind == .image, info.systemDecode else { return nil }
+        let decoded = output.deletingLastPathComponent().appendingPathComponent("decoded-source.png")
+        return (CompressionStep(label: "Reading image", arguments: [input.path, decoded.path], weight: 0, tool: .decode), decoded)
     }
 }
