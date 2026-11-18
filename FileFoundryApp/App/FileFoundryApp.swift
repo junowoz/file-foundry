@@ -27,12 +27,14 @@ struct FileFoundryApp: App {
         }
         .commands {
             TranscribeCommands()
+            CommandGroup(after: .appInfo) {
+                Button("Check for Updates…") {
+                    NotificationCenter.default.post(name: .fileFoundryCheckForUpdates, object: nil)
+                }
+            }
             CommandGroup(replacing: .help) {
                 Button("File Foundry Help") {
                     NSWorkspace.shared.open(AppMetadata.repositoryURL)
-                }
-                Button("Check for Updates") {
-                    NotificationCenter.default.post(name: .fileFoundryShowUpdater, object: nil)
                 }
             }
         }

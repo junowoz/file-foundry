@@ -21,7 +21,7 @@ if ! command -v npx >/dev/null 2>&1; then
 fi
 
 rm -rf "$DMG_ASSETS_DIR"
-rm -f "$DMG_PATH" "$DMG_PATH.sha256"
+rm -f "$DMG_PATH" "$DIST_DIR/SHA256SUMS"
 
 cleanup() {
   rm -rf "$DMG_ASSETS_DIR"
@@ -54,7 +54,8 @@ npm_config_cache="$DMG_ASSETS_DIR/npm-cache" \
 npm_config_update_notifier=false \
   npx --yes appdmg@0.6.6 "$APPDMG_CONFIG" "$DMG_PATH"
 codesign --force --sign "$CODESIGN_IDENTITY" "$DMG_PATH"
-shasum -a 256 "$DMG_PATH" > "$DMG_PATH.sha256"
+# One checksum file for the whole release: "<sha256>  <filename>" lines.
+(cd "$DIST_DIR" && shasum -a 256 "$APP_NAME.dmg" > SHA256SUMS)
 trap - EXIT
 cleanup
 
