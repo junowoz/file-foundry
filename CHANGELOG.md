@@ -2,6 +2,12 @@
 
 All notable changes to File Foundry will be documented in this file.
 
+## [1.5.1] - 2026-11-18
+
+### Changed
+
+- FFmpeg now ships inside File Foundry. Convert & Compress works on any Mac with nothing to install, including WebP, VP9/WebM, MP3, Opus, H.264 and HEVC.
+
 ## [1.5.0] - 2026-11-18
 
 ### Added

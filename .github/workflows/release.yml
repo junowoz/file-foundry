@@ -26,6 +26,19 @@ jobs:
       - name: Check secure entitlements
         run: ./scripts/check_secure_entitlements.sh
 
+      - name: Restore bundled FFmpeg
+        id: ffmpeg-cache
+        uses: actions/cache@v4
+        with:
+          path: vendor/ffmpeg
+          key: ffmpeg-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('scripts/build_ffmpeg.sh') }}
+
+      - name: Build bundled FFmpeg
+        if: steps.ffmpeg-cache.outputs.cache-hit != 'true'
+        run: |
+          brew install cmake pkgconf || true
+          ./scripts/build_ffmpeg.sh
+
       - name: Build release
         run: VERSION="${GITHUB_REF_NAME#v}" ./scripts/build_release.sh
 

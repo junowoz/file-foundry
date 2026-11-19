@@ -16,7 +16,7 @@ The release workflow builds the app, embeds the updater helper, creates a guided
 
 Release artifacts are Apple Silicon only. Ad-hoc signing is the default for local and CI builds unless `CODESIGN_IDENTITY` is set to a Developer ID Application identity. Gatekeeper-friendly public releases require Developer ID signing and notarization.
 
-The app requests no signing entitlements and is intentionally not App Sandboxed so Converter can launch a user-installed FFmpeg executable. Release validation must include `FILE_FOUNDRY_VERIFY_FFMPEG=1 ./dist/FileFoundry.app/Contents/MacOS/FileFoundry` on a Mac with FFmpeg installed.
+The app requests no signing entitlements and is intentionally not App Sandboxed and ships its own FFmpeg and ffprobe in `Contents/Helpers`. `scripts/build_ffmpeg.sh` builds them from pinned sources (the release workflow caches the result by the script's hash, so changing a version rebuilds them). When FFmpeg versions change, upload `vendor/ffmpeg/sources/*` to a new `ffmpeg-sources-<version>` prerelease and update `THIRD_PARTY_NOTICES.md`.
 
 A release has exactly three assets:
 

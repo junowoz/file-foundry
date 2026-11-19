@@ -2,7 +2,7 @@
 
 File Foundry is organized around a testable core and a native SwiftUI shell with Duplicate Finder, Media Organizer, and Converter modules.
 
-The direct-distribution bundle is not App Sandboxed because Converter launches the user's local FFmpeg executable. All three modules still begin from explicit user selections and apply their own path and operation checks.
+The direct-distribution bundle is not App Sandboxed because Converter launches the FFmpeg executables bundled in `Contents/Helpers`. All three modules still begin from explicit user selections and apply their own path and operation checks.
 
 ## Core Target
 

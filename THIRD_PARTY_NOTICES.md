@@ -27,3 +27,16 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+## FFmpeg (bundled)
+
+`FileFoundry.app/Contents/Helpers/ffmpeg` and `ffprobe` are separate programs built from unmodified upstream
+sources by `scripts/build_ffmpeg.sh` (also copied to `Contents/Resources/FFmpeg/`), with `--enable-gpl`. They are
+licensed under the GNU General Public License version 2 or later, not under File Foundry's MIT license.
+File Foundry runs them as separate processes.
+
+Included libraries: FFmpeg (LGPL 2.1+/GPL 2+), x264 (GPL 2+), x265 (GPL 2+), libvpx (BSD-3-Clause),
+libwebp (BSD-3-Clause), LAME (LGPL 2+), Opus (BSD-3-Clause). Exact versions, URLs and SHA-256 checksums are in
+`Contents/Resources/FFmpeg/SOURCES.txt`. The complete corresponding source tarballs are published on the
+`ffmpeg-sources-9.0.2` release of https://github.com/junowoz/file-foundry and are available on request from the author.
+

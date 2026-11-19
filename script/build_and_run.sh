@@ -6,7 +6,7 @@ APP_NAME="FileFoundry"
 UPDATER_NAME="FileFoundryUpdater"
 BUNDLE_ID="com.junowoz.filefoundry"
 UPDATER_BUNDLE_ID="com.junowoz.filefoundry.updater"
-VERSION="1.5.0"
+VERSION="1.5.1"
 MIN_SYSTEM_VERSION="14.0"
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -117,6 +117,14 @@ cat >"$UPDATER_INFO_PLIST" <<PLIST
 </plist>
 PLIST
 
+# Bundled FFmpeg (scripts/build_ffmpeg.sh); without it the dev build falls back to Homebrew's.
+if [[ -x "$ROOT_DIR/vendor/ffmpeg/bin/ffmpeg" ]]; then
+  mkdir -p "$APP_CONTENTS/Helpers"
+  for tool in ffmpeg ffprobe; do
+    cp "$ROOT_DIR/vendor/ffmpeg/bin/$tool" "$APP_CONTENTS/Helpers/$tool"
+    codesign --force --sign - --identifier "$BUNDLE_ID.$tool" "$APP_CONTENTS/Helpers/$tool" >/dev/null
+  done
+fi
 codesign --force --sign - --identifier "$UPDATER_BUNDLE_ID" "$UPDATER_BUNDLE" >/dev/null
 codesign --force --sign - --identifier "$BUNDLE_ID" --entitlements "$ENTITLEMENTS" "$APP_BUNDLE" >/dev/null
 

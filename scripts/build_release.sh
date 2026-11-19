@@ -5,7 +5,7 @@ APP_NAME="FileFoundry"
 UPDATER_NAME="FileFoundryUpdater"
 BUNDLE_ID="com.junowoz.filefoundry"
 UPDATER_BUNDLE_ID="com.junowoz.filefoundry.updater"
-VERSION="${VERSION:-1.5.0}"
+VERSION="${VERSION:-1.5.1}"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DIST_DIR="$ROOT_DIR/dist"
 APP_BUNDLE="$DIST_DIR/$APP_NAME.app"
@@ -127,6 +127,22 @@ if [[ "$UPDATER_ARCHS" != "arm64" ]]; then
   echo "Expected an Apple Silicon-only updater binary, got: $UPDATER_ARCHS" >&2
   exit 1
 fi
+
+# FFmpeg ships inside the app (Contents/Helpers) so Convert & Compress needs nothing installed.
+FFMPEG_BIN="$ROOT_DIR/vendor/ffmpeg/bin"
+if [[ ! -x "$FFMPEG_BIN/ffmpeg" || ! -x "$FFMPEG_BIN/ffprobe" ]]; then
+  "$ROOT_DIR/scripts/build_ffmpeg.sh"
+fi
+mkdir -p "$APP_CONTENTS/Helpers"
+for tool in ffmpeg ffprobe; do
+  cp "$FFMPEG_BIN/$tool" "$APP_CONTENTS/Helpers/$tool"
+  chmod 755 "$APP_CONTENTS/Helpers/$tool"
+  [[ "$(lipo -archs "$APP_CONTENTS/Helpers/$tool")" == "arm64" ]] || { echo "$tool is not arm64 only" >&2; exit 1; }
+  codesign --force --sign "$CODESIGN_IDENTITY" --identifier "$BUNDLE_ID.$tool" "$APP_CONTENTS/Helpers/$tool"
+done
+mkdir -p "$APP_RESOURCES/FFmpeg"
+cp "$ROOT_DIR/vendor/ffmpeg/SOURCES.txt" "$APP_RESOURCES/FFmpeg/SOURCES.txt"
+cp "$ROOT_DIR/scripts/build_ffmpeg.sh" "$APP_RESOURCES/FFmpeg/build_ffmpeg.sh"
 
 codesign --force --sign "$CODESIGN_IDENTITY" --identifier "$UPDATER_BUNDLE_ID" "$UPDATER_BUNDLE"
 codesign --force --sign "$CODESIGN_IDENTITY" --identifier "$BUNDLE_ID" --entitlements "$ENTITLEMENTS" "$APP_BUNDLE"

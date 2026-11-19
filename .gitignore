@@ -11,3 +11,5 @@ dist/
 *.dSYM/
 *.zip
 *.dmg
+vendor/
+.build-ffmpeg/

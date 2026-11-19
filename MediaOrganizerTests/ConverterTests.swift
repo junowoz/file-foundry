@@ -279,4 +279,14 @@ final class ConverterTests: XCTestCase {
         XCTAssertEqual(SystemImage.info(result.outputURL)?.videoCodec, "mjpeg")
         try? FileManager.default.removeItem(at: dir)
     }
+
+    func testBundledFFmpegWinsOverHomebrewAndPath() throws {
+        let helpers = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("ff-helpers-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: helpers, withIntermediateDirectories: true)
+        let bin = helpers.appendingPathComponent("ffmpeg")
+        FileManager.default.createFile(atPath: bin.path, contents: Data(), attributes: [.posixPermissions: 0o755])
+        XCTAssertEqual(ToolLocator.locate("ffmpeg", bundled: helpers, environment: ["PATH": "/usr/bin"]), bin)
+        XCTAssertNotEqual(ToolLocator.locate("ffmpeg", bundled: nil, environment: [:]), bin)
+        try? FileManager.default.removeItem(at: helpers)
+    }
 }

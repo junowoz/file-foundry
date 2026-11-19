@@ -53,7 +53,7 @@ enum ToolError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .toolMissing(let name): "\(name) was not found. Install it with Homebrew: brew install ffmpeg"
+        case .toolMissing(let name): "\(name) is missing from this copy of File Foundry. Download the app again from its GitHub release."
         case .failed(let message), .invalid(let message): message
         }
     }
