@@ -143,7 +143,7 @@ enum ConverterPreset: String, CaseIterable, Identifiable, Sendable {
         switch info.kind {
         case .video, .other: .videoH264
         case .audio: .audioMP3
-        case .image: info.videoCodec == "mjpeg" ? .imagePNG : .imageJPEG
+        case .image: ["mjpeg", "svg"].contains(info.videoCodec ?? "") ? .imagePNG : .imageJPEG
         }
     }
 }
@@ -153,8 +153,15 @@ enum ConversionPlanner {
         var steps: [CompressionStep] = []
         var decodedInput: URL?
         if preset.usesSips {
-            steps = [CompressionStep(label: "Converting to \(preset.shortTitle)",
-                                     arguments: preset.arguments + [input.path, "--out", output.path], weight: 1, tool: .sips)]
+            // sips reads HEIC/RAW itself but not SVG: rasterise those first, then convert the PNG.
+            var source = input
+            if SystemImage.isSVG(input), let decode = SystemDecode.step(info: info, input: input, output: output) {
+                steps.append(decode.step)
+                source = decode.decoded
+                decodedInput = decode.decoded
+            }
+            steps.append(CompressionStep(label: "Converting to \(preset.shortTitle)",
+                                         arguments: preset.arguments + [source.path, "--out", output.path], weight: 1, tool: .sips))
         } else {
             var source = input
             if preset.group == .image, let decode = SystemDecode.step(info: info, input: input, output: output) {

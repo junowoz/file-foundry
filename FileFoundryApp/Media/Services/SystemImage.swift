@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import ImageIO
 import UniformTypeIdentifiers
@@ -16,6 +17,7 @@ enum SystemImage {
 
     /// Kind, size and codec of a still image, or nil when macOS can't read it as one.
     static func info(_ url: URL) -> MediaInfo? {
+        if isSVG(url) { return svgInfo(url) }
         guard isStillImageType(url),
               let source = CGImageSourceCreateWithURL(url as CFURL, [kCGImageSourceShouldCache: false] as CFDictionary),
               CGImageSourceGetCount(source) > 0,
@@ -38,8 +40,57 @@ enum SystemImage {
         return system
     }
 
+    static func isSVG(_ url: URL) -> Bool { url.pathExtension.lowercased() == "svg" }
+
+    /// Longest side, in pixels, of a rasterised SVG: vectors have no pixel size, so small ones are enlarged to stay sharp.
+    private static let svgMinSide: CGFloat = 2048, svgMaxSide: CGFloat = 8192
+
+    private static func svgPixelSize(_ image: NSImage) -> (width: Int, height: Int)? {
+        var size = image.size
+        if let rep = image.representations.first, rep.pixelsWide > 0, rep.pixelsHigh > 0 {
+            size = NSSize(width: rep.pixelsWide, height: rep.pixelsHigh)
+        }
+        guard size.width > 0, size.height > 0 else { return nil }
+        let longest = max(size.width, size.height)
+        let scale = longest < svgMinSide ? svgMinSide / longest : min(1, svgMaxSide / longest)
+        return (max(1, Int((size.width * scale).rounded())), max(1, Int((size.height * scale).rounded())))
+    }
+
+    private static func svgInfo(_ url: URL) -> MediaInfo? {
+        guard let image = NSImage(contentsOf: url), let size = svgPixelSize(image) else { return nil }
+        var info = MediaInfo()
+        info.kind = .image
+        info.width = size.width
+        info.height = size.height
+        info.videoCodec = "svg"
+        return info
+    }
+
+    /// Draws an SVG into a transparent bitmap with macOS's own renderer.
+    private static func rasterizeSVG(input: URL, output: URL) throws {
+        guard let image = NSImage(contentsOf: input), let size = svgPixelSize(image),
+              let rep = NSBitmapImageRep(
+                bitmapDataPlanes: nil, pixelsWide: size.width, pixelsHigh: size.height, bitsPerSample: 8,
+                samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB,
+                bytesPerRow: 0, bitsPerPixel: 0),
+              let context = NSGraphicsContext(bitmapImageRep: rep)
+        else { throw ToolError.failed("macOS can't read this SVG.") }
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = context
+        context.imageInterpolation = .high
+        image.draw(in: NSRect(x: 0, y: 0, width: size.width, height: size.height),
+                   from: .zero, operation: .sourceOver, fraction: 1)
+        context.flushGraphics()
+        NSGraphicsContext.restoreGraphicsState()
+        guard let png = rep.representation(using: .png, properties: [:]) else {
+            throw ToolError.failed("Couldn't render this SVG.")
+        }
+        try png.write(to: output)
+    }
+
     /// Writes the primary image as PNG with its orientation applied, for ffmpeg to encode. Blocking.
     static func decodeToPNG(input: URL, output: URL) throws {
+        if isSVG(input) { return try rasterizeSVG(input: input, output: output) }
         guard let source = CGImageSourceCreateWithURL(input as CFURL, nil), CGImageSourceGetCount(source) > 0 else {
             throw ToolError.failed("macOS can't read this image.")
         }

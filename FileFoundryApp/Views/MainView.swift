@@ -40,8 +40,8 @@ struct MainView: View {
                     Label(trashTitle, systemImage: "trash")
                         .labelStyle(.titleAndIcon)
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(.red)
+                // Plain toolbar style with red text: a prominent red fill washed out when disabled in Dark mode.
+                .foregroundStyle(viewModel.canMoveSelectedFiles ? Color.red : Color.secondary)
                 .disabled(!viewModel.canMoveSelectedFiles)
                 .help("Move the selected copies to the Trash. You can restore them from the Trash.")
 

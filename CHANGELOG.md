@@ -2,6 +2,17 @@
 
 All notable changes to File Foundry will be documented in this file.
 
+## [1.5.2] - 2026-11-18
+
+### Added
+
+- Convert & Compress: SVG images convert to PNG, JPEG, WebP, HEIC, TIFF, GIF and BMP. Vectors are rendered sharp (at least 2048 px on the long side) with transparency kept.
+- A Home screen is now the first thing File Foundry shows, with a card for each tool.
+
+### Fixed
+
+- Dark Mode: the Move to Trash button in Duplicate Finder no longer renders as a washed-out red block.
+
 ## [1.5.1] - 2026-11-18
 
 ### Changed
