@@ -2,6 +2,12 @@
 
 All notable changes to File Foundry will be documented in this file.
 
+## [1.5.4] - 2026-11-25
+
+### Fixed
+
+- Self-update no longer hangs on "Installing Update". The updater helper is started with `open`, which returns right away, and the app is forced to quit if a normal quit does not happen within 3 seconds. Updating from an older version to 1.5.4 still needs a manual install once.
+
 ## [1.5.3] - 2026-11-25
 
 ### Fixed

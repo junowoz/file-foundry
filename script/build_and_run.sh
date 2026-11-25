@@ -6,7 +6,7 @@ APP_NAME="FileFoundry"
 UPDATER_NAME="FileFoundryUpdater"
 BUNDLE_ID="com.junowoz.filefoundry"
 UPDATER_BUNDLE_ID="com.junowoz.filefoundry.updater"
-VERSION="1.5.3"
+VERSION="1.5.4"
 MIN_SYSTEM_VERSION="14.0"
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

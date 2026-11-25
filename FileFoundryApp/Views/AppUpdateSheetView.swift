@@ -173,7 +173,7 @@ struct AppUpdateSheetView: View {
         viewModel.markInstalling(stagedUpdate)
         do {
             try await AppUpdateInstaller.launch(stagedUpdate: stagedUpdate)
-            NSApp.terminate(nil)
+            AppUpdateInstaller.quitForUpdate()
         } catch {
             viewModel.fail(error)
         }
