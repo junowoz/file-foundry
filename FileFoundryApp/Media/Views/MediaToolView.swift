@@ -2,7 +2,9 @@ import SwiftUI
 
 /// Convert & Compress: drop files, then decide what to do with them, by type.
 struct MediaToolView: View {
-    @State private var model = MediaModel()
+    @State private var model: MediaModel
+
+    init(model: MediaModel) { _model = State(initialValue: model) }
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var spring: Animation? { reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 1) }
@@ -34,7 +36,6 @@ struct MediaToolView: View {
         .navigationTitle("Convert & Compress")
         .animation(spring, value: model.queue.items.map(\.id))
         .animation(spring, value: model.queue.kinds)
-        .onDisappear { model.cancel() }
     }
 
     /// Queue status at the bottom: what is happening now, and how many files are done.

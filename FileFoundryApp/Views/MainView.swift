@@ -3,12 +3,16 @@ import FileFoundryCore
 import SwiftUI
 
 struct MainView: View {
-    @StateObject private var viewModel = MainViewModel()
+    @StateObject private var viewModel: MainViewModel
     @State private var selectedFolder: URL?
     @State private var showTrashConfirmation = false
     @State private var showPreview = false
     @State private var hasAutoOpenedPreview = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    init(viewModel: MainViewModel) { _viewModel = StateObject(wrappedValue: viewModel) }
+
+    private var canStartOver: Bool { viewModel.scanState != .movingToTrash && (!viewModel.folders.isEmpty || viewModel.scanResult != nil) }
 
     var body: some View {
         // Bar stacked below the split: HSplitView ignores safe-area insets, so content would hide under it.
@@ -44,6 +48,19 @@ struct MainView: View {
                 .foregroundStyle(viewModel.canMoveSelectedFiles ? Color.red : Color.secondary)
                 .disabled(!viewModel.canMoveSelectedFiles)
                 .help("Move the selected copies to the Trash. You can restore them from the Trash.")
+
+                Button {
+                    viewModel.cancelScan()
+                    viewModel.clearFolders()
+                    selectedFolder = nil
+                    showPreview = false
+                    hasAutoOpenedPreview = false
+                    viewModel.scanState = .idle
+                } label: {
+                    Label("Start Over", systemImage: "arrow.counterclockwise")
+                }
+                .disabled(!canStartOver)
+                .help("Stop the scan and clear the folders and results")
 
                 Button {
                     showPreview.toggle()

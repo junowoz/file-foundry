@@ -79,6 +79,11 @@ struct FileFoundryRootView: View {
     @SceneStorage("selectedModule") private var selectedModule = FoundryModule.home.rawValue
     @AppStorage("rackOrder") private var rackOrder = ""
     @AppStorage(AppUpdateViewModel.autoCheckDefaultsKey) private var autoCheckForUpdates = true
+    // Rack state lives here, above the detail switch, so a rack keeps scanning, converting and its
+    // results while another rack is open. Racks are reset only by their own explicit buttons.
+    @StateObject private var duplicatesModel = MainViewModel()
+    @State private var mediaModel = MediaModel()
+    @StateObject private var cleanerModel = AppCleanerModel()
     @StateObject private var updateViewModel = AppUpdateViewModel()
     @State private var showUpdater = false
 
@@ -117,12 +122,12 @@ struct FileFoundryRootView: View {
         } detail: {
             switch module.wrappedValue {
             case .home: HomeView(open: { module.wrappedValue = $0 })
-            case .duplicates: MainView()
+            case .duplicates: MainView(viewModel: duplicatesModel)
             case .organizer: ContentView(store: mediaStore)
-            case .media: MediaToolView()
+            case .media: MediaToolView(model: mediaModel)
             case .transcribe: TranscribeRootView()
             case .secondScreen: SecondScreenView()
-            case .cleaner: AppCleanerRootView()
+            case .cleaner: AppCleanerRootView(model: cleanerModel)
             }
         }
         .navigationSplitViewStyle(.balanced)

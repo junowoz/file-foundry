@@ -205,7 +205,11 @@ final class AppCleanerModel: ObservableObject {
 
     // MARK: Loading
 
+    private var hasStarted = false
+
     func start() async {
+        guard !hasStarted else { return }
+        hasStarted = true
         loadApps()
         await reloadHistory()
         let env = self.env

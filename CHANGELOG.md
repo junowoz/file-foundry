@@ -2,6 +2,16 @@
 
 All notable changes to File Foundry will be documented in this file.
 
+## [1.5.3] - 2026-11-25
+
+### Fixed
+
+- Racks keep working in parallel. Switching to another rack no longer stops a conversion, compression, duplicate scan or App Cleaner scan, and each rack keeps its files and results when you come back.
+
+### Added
+
+- Explicit reset: Start Over in Duplicate Finder and Media Organizer (Remove all in Convert & Compress, Rescan in App Cleaner). Nothing is cleared by switching racks anymore.
+
 ## [1.5.2] - 2026-11-18
 
 ### Added

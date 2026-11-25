@@ -35,6 +35,11 @@ struct ContentView: View {
                     .foregroundStyle(.secondary)
             }
             ToolbarItem(placement: .primaryAction) {
+                Button("Start Over", systemImage: "arrow.counterclockwise") { store.startOver() }
+                    .disabled(!store.canStartOver)
+                    .help("Clear the folders and go back to the first step. Copied files are not touched.")
+            }
+            ToolbarItem(placement: .primaryAction) {
                 Button("Media Organizer Options", systemImage: "gearshape") { showSettings = true }
             }
         }

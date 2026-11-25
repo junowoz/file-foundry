@@ -180,6 +180,25 @@ final class AppStore {
 
     func cancel() { operationTask?.cancel() }
 
+    var canStartOver: Bool { !isWorking && (!sources.isEmpty || destinationParent != nil || summary != nil || step != .sources) }
+
+    /// Back to the first step with nothing chosen. Never touches files already copied.
+    func startOver() {
+        guard !isWorking else { return }
+        sources = []
+        destinationParent = nil
+        summary = nil
+        plan = nil
+        manifest = nil
+        outputURL = nil
+        errorMessage = nil
+        acceptsIncompleteScan = false
+        progressCompleted = 0
+        progressTotal = 0
+        step = .sources
+        statusMessage = "Add one or more folders to get started."
+    }
+
     func revealOutput() {
         if let outputURL { NSWorkspace.shared.activateFileViewerSelecting([outputURL]) }
     }
